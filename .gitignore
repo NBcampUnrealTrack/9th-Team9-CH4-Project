@@ -18,6 +18,7 @@ Saved/
 
 .vscode/
 .idea/
+.test/
 
 # Visual Studio cache
 .vs/
