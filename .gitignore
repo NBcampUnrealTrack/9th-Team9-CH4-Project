@@ -1,0 +1,25 @@
+# Unreal Engine generated files
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+
+# Visual Studio / Rider / IDE files
+.vs/
+.idea/
+.test/
+*.sln.DotSettings.user
+
+# Build output and logs
+Build/
+*.log
+
+# User-specific files
+*.user
+*.suo
+*.opensdf
+*.sdf
+
+# OS files
+Thumbs.db
+Desktop.ini
