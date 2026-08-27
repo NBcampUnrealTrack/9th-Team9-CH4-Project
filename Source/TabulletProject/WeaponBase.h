@@ -31,7 +31,10 @@ public:
 	float Range;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
-	float SplashRadius;
+	int32 PelletCount;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	float SpreadAngle;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	bool bIsInstantKill;
@@ -40,8 +43,8 @@ public:
 	void InitializeWeaponData();
 
 	// TODO: 서버 권위 처리 필요 - 현재는 로컬 테스트용 구조
-	// 클라이언트가 부르는 진입점. 지금은 바로 라인트레이스를 실행하지만,
-	// 최종적으로는 Server_Fire()를 호출하도록 바꿔야 함 (판정은 서버에서만).
+	// 클라이언트가 부르는 진입점. 지금은 바로 라인트레이스를 실행하지만
+	// 최종적으로는 Server_Fire()를 호출하도록 바꿔야 함 (판정은 서버에서만)
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	virtual void Fire();
 
