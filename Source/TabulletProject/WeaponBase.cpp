@@ -2,6 +2,7 @@
 
 #include "WeaponBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/OverlapResult.h"
 #include "DrawDebugHelpers.h"
 
 AWeaponBase::AWeaponBase()
@@ -14,8 +15,8 @@ AWeaponBase::AWeaponBase()
 
 void AWeaponBase::BeginPlay()
 {
-	Super::BeginPlay();
 	InitializeWeaponData(); //총 생성되면 DataTable에서 스탯채움
+	Super::BeginPlay();
 }
 
 void AWeaponBase::Tick(float DeltaTime)
@@ -39,46 +40,62 @@ void AWeaponBase::InitializeWeaponData()
 	{
 		Damage = Row->Damage;
 		Range = Row->Range;
-		SplashRadius = Row->SplashRadius;
+		PelletCount = Row->PelletCount;
+		SpreadAngle = Row->SpreadAngle;
 		bIsInstantKill = Row->bIsInstantKill;
 	}
 }
 
 void AWeaponBase::Fire()
 {
-	if (!WeaponMesh)
-	{
-		return;
-	}
+	if (!WeaponMesh) return;
 
 	FVector StartLocation = WeaponMesh->GetSocketLocation(TEXT("MuzzleSocket"));
 	FVector ForwardVector = WeaponMesh->GetSocketRotation(TEXT("MuzzleSocket")).Vector();
-	FVector EndLocation = StartLocation + (ForwardVector * Range);
 
-	FHitResult HitResult;
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(this);
 
-	bool bHit = GetWorld()->LineTraceSingleByChannel(
-		HitResult,
-		StartLocation,
-		EndLocation,
-		ECC_Visibility,
-		QueryParams
-	);
+	int32 NumPellets = FMath::Max(PelletCount, 1);
+	
+	TSet<AActor*> HitActors; // 발사에서 이미 맞은 엑터 기록
 
-	DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, 1.0f, 0, 1.0f);
-
-	if (bHit)
+	for (int32 i = 0; i < NumPellets; i++)
 	{
-		AActor* HitActor = HitResult.GetActor();
-		if (HitActor)
+		float AngleOffset = 0.0f;
+		if (NumPellets > 1)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("%s hit %s with %s (Damage: %.1d)"),
-				*GetName(), *HitActor->GetName(), *UEnum::GetValueAsString(WeaponType), Damage);
+			AngleOffset = -SpreadAngle * 0.5f + (SpreadAngle / (NumPellets - 1)) * i;
+		}
 
-			// TODO : 실제 데미지 적용 로직 (UGameplayStatics::ApplyDamage 등)
-			// TODO : 서버 권위 붙이면 이 블록 전체가 Server_Fire() 안으로 이동
+		// 좌우회전으로 방향
+		FVector PelletDirection = ForwardVector.RotateAngleAxis(AngleOffset, FVector::UpVector);
+		FVector EndLocation = StartLocation + (PelletDirection * Range);
+
+		FHitResult HitResult;
+		bool bHit = GetWorld()->LineTraceSingleByChannel(
+			HitResult,
+			StartLocation,
+			EndLocation,
+			ECC_Visibility,
+			QueryParams
+		);
+
+		DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, 1.0f, 0, 1.0f);
+
+		if (bHit)
+		{
+			AActor* HitActor = HitResult.GetActor();
+			if (HitActor && !HitActors.Contains(HitActor)) //중복체크
+			{
+				HitActors.Add(HitActor);
+				
+				UE_LOG(LogTemp, Warning, TEXT("%s hit %s with %s (Damage: %.1d)"),
+					*GetName(), *HitActor->GetName(), *UEnum::GetValueAsString(WeaponType), Damage);
+
+				// TODO : 실제 데미지 적용 로직 (UGameplayStatics::ApplyDamage 등)
+				// TODO : 서버 권위 붙이면 이 블록 전체 Server_Fire() 안으로 이동
+			}
 		}
 	}
 }
