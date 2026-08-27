@@ -21,11 +21,23 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
 	UStaticMeshComponent* WeaponMesh;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
-	float Damage = 1.0f;
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+	UDataTable* WeaponDataTable;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapon")
-	float Range = 1000.0f;
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	int32 Damage;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	float Range;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	float SplashRadius;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	bool bIsInstantKill;
+
+	UFUNCTION(BlueprintCallable, Category = "Weapon")
+	void InitializeWeaponData();
 
 	// TODO: 서버 권위 처리 필요 - 현재는 로컬 테스트용 구조
 	// 클라이언트가 부르는 진입점. 지금은 바로 라인트레이스를 실행하지만,
