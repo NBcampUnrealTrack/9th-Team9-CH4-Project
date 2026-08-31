@@ -7,6 +7,7 @@ Saved/
 
 # test 폴더 및 하위 모든 파일 제외
 Content/test/
+Source/TabulletProject/test/
 
 # Visual Studio / Rider / IDE files
 .vs/
