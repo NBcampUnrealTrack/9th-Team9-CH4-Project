@@ -97,3 +97,16 @@ bool ATableBulletPiece::ApplyFlickImpulse(const FVector& WorldImpulse)
 
 	return true;
 }
+
+bool ATableBulletPiece::IsMoving(float LinearThreshold, float AngularThreshold) const	// 아웃, 속도, 정지 판별
+{
+	if (IsOut() || !IsValid(PieceMesh) || !PieceMesh->IsSimulatingPhysics())
+	{
+		return false;
+	}
+
+	const float LinearSpeedSquared = PieceMesh->GetPhysicsLinearVelocity().SizeSquared();
+	const float AngularSpeedSquared = PieceMesh->GetPhysicsAngularVelocityInDegrees().SizeSquared();
+
+	return LinearSpeedSquared > FMath::Square(LinearThreshold) || AngularSpeedSquared > FMath::Square(AngularThreshold);
+}
