@@ -40,6 +40,20 @@ void ATableBulletPiece::MarkAsOut()
 	ForceNetUpdate();
 }
 
+bool ATableBulletPiece::IsOwnedBy(const APlayerState* PlayerState) const
+{
+	return PlayerState && OwningPlayerState == PlayerState;
+}
+
+void ATableBulletPiece::SetOwningPlayerState(APlayerState* NewOwningPlayerState)
+{
+	if (HasAuthority())
+	{
+		OwningPlayerState = NewOwningPlayerState;
+		ForceNetUpdate();
+	}
+}
+
 void ATableBulletPiece::OnRep_PieceState()
 {
 	if (IsOut())
@@ -96,4 +110,17 @@ bool ATableBulletPiece::ApplyFlickImpulse(const FVector& WorldImpulse)
 	ForceNetUpdate();										
 
 	return true;
+}
+
+bool ATableBulletPiece::IsMoving(float LinearThreshold, float AngularThreshold) const	// 아웃, 속도, 정지 판별
+{
+	if (IsOut() || !IsValid(PieceMesh) || !PieceMesh->IsSimulatingPhysics())
+	{
+		return false;
+	}
+
+	const float LinearSpeedSquared = PieceMesh->GetPhysicsLinearVelocity().SizeSquared();
+	const float AngularSpeedSquared = PieceMesh->GetPhysicsAngularVelocityInDegrees().SizeSquared();
+
+	return LinearSpeedSquared > FMath::Square(LinearThreshold) || AngularSpeedSquared > FMath::Square(AngularThreshold);
 }
