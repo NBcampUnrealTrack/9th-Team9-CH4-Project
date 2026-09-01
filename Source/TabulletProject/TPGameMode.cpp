@@ -376,7 +376,7 @@ bool ATPGameMode::AreAnyPiecesMoving() const
 
 	for (TActorIterator<ATableBulletPiece> It(GetWorld()); It; ++It)
 	{
-		if (const ATableBulletPiece* Piece = *It; Piece && Piece->IsMovingAboveSpeed(PieceStoppedSpeedThreshold))
+		if (const ATableBulletPiece* Piece = *It; Piece && Piece->IsMoving(PieceStoppedSpeedThreshold, PieceStoppedSpeedThreshold))
 		{
 			return true;
 		}
