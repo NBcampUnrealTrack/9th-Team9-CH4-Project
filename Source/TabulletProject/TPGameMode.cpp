@@ -184,7 +184,7 @@ bool ATPGameMode::RequestFlick(AController* RequestingController, AFlickTableBas
 		return false;
 	}
 
-	if (!IsValid(Table) || !IsValid(Piece) || Piece->IsOut() || !Piece->IsOwnedBy(RequestingController->PlayerState))
+	if (!IsValid(Table) || !IsValid(Piece) || Piece->IsOut() || !Piece->IsOwnedByPlayerState(RequestingController->PlayerState))
 	{
 		return false;
 	}
@@ -376,7 +376,7 @@ bool ATPGameMode::AreAnyPiecesMoving() const
 
 	for (TActorIterator<ATableBulletPiece> It(GetWorld()); It; ++It)
 	{
-		if (const ATableBulletPiece* Piece = *It; Piece && Piece->IsMovingAboveSpeed(PieceStoppedSpeedThreshold))
+		if (const ATableBulletPiece* Piece = *It; Piece && Piece->IsMoving(PieceStoppedSpeedThreshold, PieceStoppedSpeedThreshold))
 		{
 			return true;
 		}

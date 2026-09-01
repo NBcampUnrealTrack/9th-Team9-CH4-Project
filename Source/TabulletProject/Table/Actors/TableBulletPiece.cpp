@@ -41,20 +41,6 @@ void ATableBulletPiece::MarkAsOut()
 	ForceNetUpdate();
 }
 
-bool ATableBulletPiece::IsOwnedBy(const APlayerState* PlayerState) const
-{
-	return PlayerState && OwningPlayerState == PlayerState;
-}
-
-void ATableBulletPiece::SetOwningPlayerState(APlayerState* NewOwningPlayerState)
-{
-	if (HasAuthority())
-	{
-		OwningPlayerState = NewOwningPlayerState;
-		ForceNetUpdate();
-	}
-}
-
 void ATableBulletPiece::OnRep_PieceState()
 {
 	if (IsOut())
@@ -124,5 +110,26 @@ bool ATableBulletPiece::IsMoving(float LinearThreshold, float AngularThreshold) 
 	const float AngularSpeedSquared = PieceMesh->GetPhysicsAngularVelocityInDegrees().SizeSquared();
 
 	return LinearSpeedSquared > FMath::Square(LinearThreshold) || AngularSpeedSquared > FMath::Square(AngularThreshold);
+}
+
+void ATableBulletPiece::SetOwningPlayerState(APlayerState* InOwningPlayerState)	// 서버에서 총알 소유자 정함
+{
+	if (!HasAuthority() || PieceType != ETablePieceType::Normal)
+	{
+		return;
+	}
+
+	OwningPlayerState = InOwningPlayerState;
+	ForceNetUpdate();
+}
+
+APlayerState* ATableBulletPiece::GetOwningPlayerState() const				// 현재 소유자 누군지
+{
+	return OwningPlayerState;
+}
+
+bool ATableBulletPiece::IsOwnedByPlayerState(const APlayerState* PlayerState) const
+{
+	return IsValid(PlayerState) && OwningPlayerState == PlayerState;
 }
 }
