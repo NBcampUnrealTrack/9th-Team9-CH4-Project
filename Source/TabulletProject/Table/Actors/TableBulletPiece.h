@@ -26,19 +26,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Table Piece")
 	bool IsOut() const	{ return PieceState == ETablePieceState::Out; }
 
-	UFUNCTION(BlueprintPure, Category = "Table Piece")
-	bool IsOwnedBy(const APlayerState* PlayerState) const;
-
-	UFUNCTION(BlueprintPure, Category = "Table Piece")
-	APlayerState* GetOwningPlayerState() const { return OwningPlayerState; }
-
-	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table Piece")
-	void SetOwningPlayerState(APlayerState* NewOwningPlayerState);
-	
 	bool ApplyFlickImpulse(const FVector& WorldImpulse);
 
-	bool IsMoving(float LinearThreshold, float AngularThreshold) const;
-	
 	bool IsMoving(float LinearThreshold, float AngularThreshold) const;
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Ownership")
