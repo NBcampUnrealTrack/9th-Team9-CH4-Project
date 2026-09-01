@@ -16,13 +16,46 @@ class TABULLETPROJECT_API ATPPlayerState : public APlayerState
 	
 public:
 	
-	UPROPERTY(ReplicatedUsing = OnRep_IsReady)
+	UPROPERTY(ReplicatedUsing = OnRep_IsReady, BlueprintReadOnly, Category = "Ready")
 	bool bIsReady = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_PlayerIndex, BlueprintReadOnly, Category = "Player")
+	int32 PlayerIndex = INDEX_NONE;
+
+	UPROPERTY(ReplicatedUsing = OnRep_RemainingPieceCount, BlueprintReadOnly, Category = "Table")
+	int32 RemainingPieceCount = 0;
+
+	UPROPERTY(ReplicatedUsing = OnRep_IsEliminated, BlueprintReadOnly, Category = "Match")
+	bool bIsEliminated = false;
 	
 	void SetReady(bool bReady);
+	void SetPlayerIndex(int32 NewPlayerIndex);
+	void SetRemainingPieceCount(int32 NewRemainingPieceCount);
+	void SetEliminated(bool bNewIsEliminated);
 
 	UFUNCTION()
 	void OnRep_IsReady();
+
+	UFUNCTION()
+	void OnRep_PlayerIndex();
+
+	UFUNCTION()
+	void OnRep_RemainingPieceCount();
+
+	UFUNCTION()
+	void OnRep_IsEliminated();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Ready")
+	void OnReadyChanged(bool bReady);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Player")
+	void OnPlayerIndexChanged(int32 NewPlayerIndex);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Table")
+	void OnRemainingPieceCountChanged(int32 NewRemainingPieceCount);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Match")
+	void OnEliminatedChanged(bool bNewIsEliminated);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

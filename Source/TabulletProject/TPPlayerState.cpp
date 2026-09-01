@@ -7,14 +7,58 @@
 
 void ATPPlayerState::SetReady(bool bReady)
 {
-	if (HasAuthority())
+	if (HasAuthority() && bIsReady != bReady)
 	{
 		bIsReady = bReady;
+		OnReadyChanged(bIsReady);
+	}
+}
+
+void ATPPlayerState::SetPlayerIndex(int32 NewPlayerIndex)
+{
+	if (HasAuthority() && PlayerIndex != NewPlayerIndex)
+	{
+		PlayerIndex = NewPlayerIndex;
+		OnPlayerIndexChanged(PlayerIndex);
+	}
+}
+
+void ATPPlayerState::SetRemainingPieceCount(int32 NewRemainingPieceCount)
+{
+	if (HasAuthority() && RemainingPieceCount != NewRemainingPieceCount)
+	{
+		RemainingPieceCount = NewRemainingPieceCount;
+		OnRemainingPieceCountChanged(RemainingPieceCount);
+	}
+}
+
+void ATPPlayerState::SetEliminated(bool bNewIsEliminated)
+{
+	if (HasAuthority() && bIsEliminated != bNewIsEliminated)
+	{
+		bIsEliminated = bNewIsEliminated;
+		OnEliminatedChanged(bIsEliminated);
 	}
 }
 
 void ATPPlayerState::OnRep_IsReady()
 {
+	OnReadyChanged(bIsReady);
+}
+
+void ATPPlayerState::OnRep_PlayerIndex()
+{
+	OnPlayerIndexChanged(PlayerIndex);
+}
+
+void ATPPlayerState::OnRep_RemainingPieceCount()
+{
+	OnRemainingPieceCountChanged(RemainingPieceCount);
+}
+
+void ATPPlayerState::OnRep_IsEliminated()
+{
+	OnEliminatedChanged(bIsEliminated);
 }
 
 void ATPPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -22,5 +66,8 @@ void ATPPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ATPPlayerState, bIsReady);
+	DOREPLIFETIME(ATPPlayerState, PlayerIndex);
+	DOREPLIFETIME(ATPPlayerState, RemainingPieceCount);
+	DOREPLIFETIME(ATPPlayerState, bIsEliminated);
 }
 
