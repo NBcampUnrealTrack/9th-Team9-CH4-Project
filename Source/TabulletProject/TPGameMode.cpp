@@ -279,10 +279,10 @@ void ATPGameMode::RecalculatePlayerPieceCounts()
 	for (TActorIterator<ATableBulletPiece> It(GetWorld()); It; ++It)
 	{
 		ATableBulletPiece* Piece = *It;
-		APlayerState* Owner = Piece ? Piece->GetOwningPlayerState() : nullptr;
-		if (IsValid(Owner) && !Piece->IsOut())
+		APlayerState* PieceOwner = Piece ? Piece->GetOwningPlayerState() : nullptr;
+		if (IsValid(PieceOwner) && !Piece->IsOut())
 		{
-			PieceCounts.FindOrAdd(Owner)++;
+			PieceCounts.FindOrAdd(PieceOwner)++;
 		}
 	}
 
