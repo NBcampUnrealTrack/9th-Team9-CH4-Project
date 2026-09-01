@@ -184,7 +184,7 @@ bool ATPGameMode::RequestFlick(AController* RequestingController, AFlickTableBas
 		return false;
 	}
 
-	if (!IsValid(Table) || !IsValid(Piece) || Piece->IsOut() || !Piece->IsOwnedBy(RequestingController->PlayerState))
+	if (!IsValid(Table) || !IsValid(Piece) || Piece->IsOut() || !Piece->IsOwnedByPlayerState(RequestingController->PlayerState))
 	{
 		return false;
 	}
