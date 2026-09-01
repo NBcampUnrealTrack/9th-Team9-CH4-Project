@@ -39,6 +39,8 @@ public:
 
 	bool IsMoving(float LinearThreshold, float AngularThreshold) const;
 	
+	bool IsMoving(float LinearThreshold, float AngularThreshold) const;
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table")
 	TObjectPtr<UStaticMeshComponent> PieceMesh;

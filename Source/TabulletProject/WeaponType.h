@@ -20,16 +20,19 @@ struct FWeaponData : public FTableRowBase
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	float Range;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	EWeaponType WeaponType;
-
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float Range;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int32 Damage;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	float SplashRadius;
+	int32 PelletCount;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float SpreadAngle;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bIsInstantKill;

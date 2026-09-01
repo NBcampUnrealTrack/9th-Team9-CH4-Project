@@ -124,3 +124,4 @@ bool ATableBulletPiece::IsMoving(float LinearThreshold, float AngularThreshold) 
 
 	return LinearSpeedSquared > FMath::Square(LinearThreshold) || AngularSpeedSquared > FMath::Square(AngularThreshold);
 }
+}
