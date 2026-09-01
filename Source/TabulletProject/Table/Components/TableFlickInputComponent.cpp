@@ -14,6 +14,7 @@
 #include "TabulletProject/Table/Actors/TableBulletPiece.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Math/RotationMatrix.h"
+#include "GameFramework/PlayerState.h"
 
 
 // Sets default values for this component's properties
@@ -254,6 +255,13 @@ ATableBulletPiece* UTableFlickInputComponent::FindPieceUnderCursor() const
 	{
 		return nullptr;
 	}
+	
+	APlayerState* LocalPlayerState = PlayerController->GetPlayerState<APlayerState>();
+
+	if (!HitPiece->IsOwnedByPlayerState(LocalPlayerState))
+	{
+		return nullptr;
+	}
 
 	return HitPiece;
 }
@@ -292,8 +300,16 @@ void UTableFlickInputComponent::SetTableInputEnabled(bool bEnabled, AFlickTableB
 void UTableFlickInputComponent::ServerRequestFlick_Implementation(ATableBulletPiece* Piece, AFlickTableBase* Table,
 	FVector WorldDirection, float NormalizedPower)
 {
-	if (!IsValid(Piece)	|| !IsValid(Table) || Piece->IsOut())
+	if (!IsValid(Piece) || !IsValid(Table) || Piece->IsOut() || !IsValid(PlayerController))
 	{
+		return;
+	}
+
+	APlayerState* RequestingPlayerState = PlayerController->GetPlayerState<APlayerState>();
+
+	if (!Piece->IsOwnedByPlayerState(RequestingPlayerState))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Rejected flick request: player does not own piece %s"), *Piece->GetName());
 		return;
 	}
 

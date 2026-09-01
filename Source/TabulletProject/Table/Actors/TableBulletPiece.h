@@ -41,6 +41,15 @@ public:
 	
 	bool IsMoving(float LinearThreshold, float AngularThreshold) const;
 	
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Ownership")
+	void SetOwningPlayerState(APlayerState* InOwningPlayerState);
+
+	UFUNCTION(BlueprintPure, Category = "Table | Ownership")
+	APlayerState* GetOwningPlayerState() const;
+
+	UFUNCTION(BlueprintPure, Category = "Table | Ownership")
+	bool IsOwnedByPlayerState(const APlayerState* PlayerState) const;
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table")
 	TObjectPtr<UStaticMeshComponent> PieceMesh;
