@@ -3,6 +3,7 @@
 
 #include "TableBulletPiece.h"
 #include "Components/StaticMeshComponent.h"
+#include "GameFramework/PlayerState.h"
 #include "Net/UnrealNetwork.h"
 
 // Sets default values
