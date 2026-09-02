@@ -9,6 +9,7 @@
 
 class ATableBulletPiece;
 class UTableFallJudgeComponent;
+class APlayerState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTablePiecesSettled);
 UCLASS()
@@ -25,6 +26,21 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Flick")
 	bool TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower);
+	
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Piece Registry")
+	bool RegisterPiece(ATableBulletPiece* Piece);
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Piece Registry")
+	bool UnregisterPiece(ATableBulletPiece* Piece);
+
+	UFUNCTION(BlueprintPure, Category = "Table | Piece Registry")
+	int32 GetRegisteredPieceCount() const;
+	
+	UFUNCTION(BlueprintPure, Category = "Table | Piece Registry")
+	int32 GetRemainingPieceCountForPlayer(const APlayerState* PlayerState) const;
+	
+	UFUNCTION(BlueprintPure, Category = "Table | Piece Registry")
+	int32 GetRegisteredPieceCountByType(ETablePieceType PieceType) const;
 	
 protected:
 	virtual void Tick(float DeltaSeconds) override;
@@ -53,4 +69,7 @@ protected:
 	float SettledElapsedTime = 0.0f;
 
 	bool bMonitoringPieceMovement = false;
+	
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<ATableBulletPiece>> RegisteredPieces;
 };

@@ -117,3 +117,81 @@ bool AFlickTableBase::TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirec
 
 	return bFlickApplied;
 }
+
+bool AFlickTableBase::RegisterPiece(ATableBulletPiece* Piece)
+{
+	if (!HasAuthority() || !IsValid(Piece) || Piece->IsOut() || RegisteredPieces.Contains(Piece))
+	{
+		return false;
+	}
+
+	RegisteredPieces.Add(Piece);
+
+	UE_LOG(LogTemp, Log, TEXT("Registered table piece: %s"), *Piece->GetName());
+
+	return true;
+}
+
+bool AFlickTableBase::UnregisterPiece(ATableBulletPiece* Piece)
+{
+	if (!HasAuthority() || !IsValid(Piece))
+	{
+		return false;
+	}
+
+	const int32 RemovedCount = RegisteredPieces.Remove(Piece);
+
+	if (RemovedCount > 0)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Unregistered table piece: %s"), *Piece->GetName());
+		return true;
+	}
+
+	return false;
+}
+
+int32 AFlickTableBase::GetRegisteredPieceCount() const
+{
+	return RegisteredPieces.Num();
+}
+
+int32 AFlickTableBase::GetRemainingPieceCountForPlayer(const APlayerState* PlayerState) const
+{
+	if (PlayerState == nullptr)
+	{
+		return 0;
+	}
+
+	int32 RemainingPieceCount = 0;
+
+	for (const ATableBulletPiece* RegisteredPiece : RegisteredPieces)
+	{
+		if (IsValid(RegisteredPiece) && !RegisteredPiece->IsOut() && RegisteredPiece->IsOwnedByPlayerState(PlayerState))
+		{
+			++RemainingPieceCount;
+		}
+	}
+
+	return RemainingPieceCount;
+}
+
+int32 AFlickTableBase::GetRegisteredPieceCountByType(ETablePieceType PieceType) const
+{
+	int32 MatchingPieceCount = 0;
+
+	for (const ATableBulletPiece* RegisteredPiece : RegisteredPieces)
+	{
+		if (IsValid(RegisteredPiece) && !RegisteredPiece->IsOut() && RegisteredPiece->GetPieceType() == PieceType)
+		{
+			++MatchingPieceCount;
+		}
+	}
+
+	return MatchingPieceCount;
+}
+
+/*
+ *일반탄이랑 특수탄 남은 갯수 볼 수 있음.
+ *GetRegisteredPieceCountByType(ETablePieceType::Normal);
+ *GetRegisteredPieceCountByType(ETablePieceType::Special);
+ */
