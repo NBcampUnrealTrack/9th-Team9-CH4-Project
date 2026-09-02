@@ -7,6 +7,7 @@
 #include "ViewModeComponent.generated.h"
 
 class USpringArmComponent;
+class UHeadMovementComponent;
 
 UENUM(BlueprintType)
 enum class EViewMode : uint8
@@ -33,31 +34,43 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category = "ViewMode")
 	EViewMode GetViewMode() const { return CurrentMode; }
+	
+	UFUNCTION(BlueprintPure, Category = "ViewMode")
+	bool IsFirstPerson() const { return CurrentMode == EViewMode::FirstPerson; }
 
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 	
 	void GetTargetValues(float& OutArmLength, FVector& OutOffset, float& OutPitch) const;
+	void UpdateRotationSource();
 	
 	UPROPERTY()
 	TObjectPtr<USpringArmComponent> SpringArm;
 	
+	UPROPERTY()
+	TObjectPtr<UHeadMovementComponent> HeadMovement;
+	
 	EViewMode CurrentMode = EViewMode::FirstPerson;
+	bool Blending = false;
 	
 	// 1인칭
 	UPROPERTY(EditDefaultsOnly, Category = "ViewMode|FirstPerson")
 	float FirstPersonArmLength = 0.f;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "ViewMode|FirstPerson")
-	FVector FirstPersonOffset = FVector(0.f, 0.f, 60.f);
+	FVector FirstPersonOffset = FVector::ZeroVector;
+	
+	// 캐릭별 목 늘리기 수평 보정
+	UPROPERTY(EditDefaultsOnly, Category = "ViewMode|FirstPerson")
+	FRotator FirstPersonRotationOffset = FRotator::ZeroRotator;
 	
 	// 탑뷰
 	UPROPERTY(EditDefaultsOnly, Category = "ViewMode|TopDown")
 	float TopDownArmLength = 100.f;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "ViewMode|TopDown")
-	FVector TopDownOffset = FVector(0.f, 0.f, 60.f);
+	FVector TopDownOffset = FVector::ZeroVector;
 	
 	// 탑뷰에서 내려다보는 각도
 	UPROPERTY(EditDefaultsOnly, Category = "ViewMode|TopDown")

@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "ViewModeComponent.h"
+#include "HeadMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/Controller.h"
@@ -9,7 +10,7 @@
 UViewModeComponent::UViewModeComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.bStartWithTickEnabled = true;
 
 	SetIsReplicatedByDefault(false);
 }
@@ -20,6 +21,7 @@ void UViewModeComponent::BeginPlay()
 	Super::BeginPlay();
 	
 	SpringArm = GetOwner()->FindComponentByClass<USpringArmComponent>();
+	HeadMovement = GetOwner()->FindComponentByClass<UHeadMovementComponent>();
 	
 	if (!SpringArm)
 	{
@@ -37,6 +39,7 @@ void UViewModeComponent::BeginPlay()
 	
 	SpringArm->TargetArmLength = ArmLength;
 	SpringArm->SetRelativeLocation(Offset);
+	UpdateRotationSource();
 }
 
 void UViewModeComponent::SetViewMode(EViewMode NewMode)
@@ -47,16 +50,27 @@ void UViewModeComponent::SetViewMode(EViewMode NewMode)
 	}
 	
 	CurrentMode = NewMode;
+	Blending = true;
 	
-	// 탑뷰에서 마우스로 시점 안 돌아감
-	SpringArm->bUsePawnControlRotation = (CurrentMode == EViewMode::FirstPerson);
-	
-	if (APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+	if (CurrentMode == EViewMode::TopDown && HeadMovement)
 	{
-		OwnerPawn->bUseControllerRotationYaw = (CurrentMode == EViewMode::FirstPerson);
+		HeadMovement->ResetStretch();
 	}
 	
-	SetComponentTickEnabled(true);
+	if (CurrentMode == EViewMode::FirstPerson)
+	{
+		// 탑뷰 동안 어긋난 몸 방향과 시선을 다시 맞춤
+		if (APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+		{
+			if (AController* OwnerController = OwnerPawn->GetController())
+			{
+				FRotator SyncRot = OwnerPawn->GetActorRotation();
+				SyncRot.Pitch = 0.f;
+				SyncRot.Roll = 0.f;
+				OwnerController->SetControlRotation(SyncRot);
+			}
+		}
+	}
 }
 
 void UViewModeComponent::GetTargetValues(float& OutArmLength, FVector& OutOffset, float& OutPitch) const
@@ -75,14 +89,59 @@ void UViewModeComponent::GetTargetValues(float& OutArmLength, FVector& OutOffset
 	}
 }
 
+void UViewModeComponent::UpdateRotationSource()
+{
+	if (!SpringArm)
+	{
+		return;
+	}
+	
+	// 탑뷰 : 마우스로 시점 안 돌아감
+	// 1인칭 : 목이 늘어난 동안은 머리 회전 따라감
+	const bool Stretched = HeadMovement && HeadMovement->GetIsStretched();
+	SpringArm->bUsePawnControlRotation = IsFirstPerson() && !Stretched;
+	
+	// 컨트롤러 회전을 안 쓰는 동안에는 소켓 기울기 보정
+	if (IsFirstPerson() && Stretched)
+	{
+		SpringArm->SetRelativeRotation(FirstPersonRotationOffset);
+	}
+	
+	if (APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+	{
+		OwnerPawn->bUseControllerRotationYaw = IsFirstPerson();
+	}
+}
+
 // Called every frame
 void UViewModeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	
+	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	if (!OwnerPawn || !OwnerPawn->IsLocallyControlled())
+	{
+		return;
+	}
 
 	if (!SpringArm)
 	{
-		SetComponentTickEnabled(false);
+		return;
+	}
+	
+	UpdateRotationSource();
+	
+	if (CurrentMode == EViewMode::TopDown)
+	{
+		FRotator CurrentRot = SpringArm->GetComponentRotation();
+		CurrentRot.Pitch = FMath::FInterpTo(CurrentRot.Pitch, TopDownPitch, DeltaTime, BlendSpeed);
+		CurrentRot.Yaw = FMath::FInterpTo(CurrentRot.Yaw, TopDownYaw, DeltaTime, BlendSpeed);
+		CurrentRot.Roll = 0.f;
+		SpringArm->SetWorldRotation(CurrentRot);
+	}
+	
+	if (!Blending)
+	{
 		return;
 	}
 	
@@ -97,23 +156,14 @@ void UViewModeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 	SpringArm->SetRelativeLocation(FMath::VInterpTo(
 		SpringArm->GetRelativeLocation(), TargetOffset, DeltaTime, BlendSpeed));
 	
-	if (CurrentMode == EViewMode::TopDown)
-	{
-		FRotator CurrentRot = SpringArm->GetComponentRotation();
-		CurrentRot.Pitch = FMath::FInterpTo(CurrentRot.Pitch, TargetPitch, DeltaTime, BlendSpeed);
-		CurrentRot.Yaw = FMath::FInterpTo(CurrentRot.Yaw, TopDownYaw, DeltaTime, BlendSpeed);
-		CurrentRot.Roll = 0.f;
-		SpringArm->SetWorldRotation(CurrentRot);
-	}
+	const bool ArmDone = FMath::IsNearlyEqual(SpringArm->TargetArmLength, TargetArmLength, 1.f);
+	const bool OffsetDone = SpringArm->GetRelativeLocation().Equals(TargetOffset, 1.f);
 	
-	const bool bArmDone = FMath::IsNearlyEqual(SpringArm->TargetArmLength, TargetArmLength, 1.f);
-	const bool bOffsetDone = SpringArm->GetRelativeLocation().Equals(TargetOffset, 1.f);
-	
-	if (bArmDone && bOffsetDone)
+	if (ArmDone && OffsetDone)
 	{
 		SpringArm->TargetArmLength = TargetArmLength;
 		SpringArm->SetRelativeLocation(TargetOffset);
-		SetComponentTickEnabled(false);
+		Blending = false;
 	}
 }
 

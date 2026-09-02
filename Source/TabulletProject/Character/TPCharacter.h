@@ -10,6 +10,8 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputMappingContext;
 class UInputAction;
+class UHeadMovementComponent;
+class UViewModeComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -26,10 +28,11 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
-	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
 	void Look(const FInputActionValue& Value);
+	void HeadTilt(const FInputActionValue& Value);
+	void HeadTiltReleased();
 	
 	UPROPERTY(VisibleAnywhere, Category = "Camera")
 	TObjectPtr<USpringArmComponent> SpringArm;
@@ -37,9 +40,31 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Camera")
 	TObjectPtr<UCameraComponent> Camera;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "HeadMovement")
+	TObjectPtr<UHeadMovementComponent> HeadMovement;
+	
+	UPROPERTY()
+	TObjectPtr<UViewModeComponent> ViewModeComp;
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
-	TObjectPtr<UInputAction> LookAction;
+    TObjectPtr<UInputAction> LookAction;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    TObjectPtr<UInputAction> StretchLeftAction;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    TObjectPtr<UInputAction> StretchCenterAction;
+    
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    TObjectPtr<UInputAction> StretchRightAction;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> HeadTiltAction;
+    
+    void StretchLeft();
+    void StretchCenter();
+    void StretchRight();
 };
