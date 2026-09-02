@@ -6,6 +6,8 @@
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "../Component/HeadMovementComponent.h"
+#include "../Component/ViewModeComponent.h"
 
 // Sets default values
 ATPCharacter::ATPCharacter()
@@ -18,20 +20,22 @@ ATPCharacter::ATPCharacter()
 	bUseControllerRotationRoll = false;
 	
 	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	SpringArm->SetupAttachment(RootComponent);
+	SpringArm->SetupAttachment(GetMesh(), TEXT("CameraSocket"));
+	SpringArm->SetUsingAbsoluteScale(true);
 	SpringArm->TargetArmLength = 0.f;
 	SpringArm->bUsePawnControlRotation = true;
-	SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 60.f)); // 눈높이는 메시 붙인 뒤 조정
 	
 	Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 	Camera->bUsePawnControlRotation = false;
+	HeadMovement = CreateDefaultSubobject<UHeadMovementComponent>(TEXT("HeadMovement"));
 }
 
 // Called when the game starts or when spawned
 void ATPCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	ViewModeComp = FindComponentByClass<UViewModeComponent>();
 	
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
@@ -57,6 +61,28 @@ void ATPCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		{
 			EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &ATPCharacter::Look);
 		}
+		
+		if (StretchLeftAction)
+		{
+			EnhancedInput->BindAction(StretchLeftAction, ETriggerEvent::Started, this, &ATPCharacter::StretchLeft);
+		}
+		
+		if (StretchCenterAction)
+		{
+			EnhancedInput->BindAction(StretchCenterAction, ETriggerEvent::Started, this, &ATPCharacter::StretchCenter);
+		}
+		
+		if (StretchRightAction)
+		{
+			EnhancedInput->BindAction(StretchRightAction, ETriggerEvent::Started, this, &ATPCharacter::StretchRight);
+		}
+		
+		if (HeadTiltAction)
+		{
+			EnhancedInput->BindAction(HeadTiltAction, ETriggerEvent::Triggered, this, &ATPCharacter::HeadTilt);
+			EnhancedInput->BindAction(HeadTiltAction, ETriggerEvent::Completed, this , &ATPCharacter::HeadTiltReleased);
+			EnhancedInput->BindAction(HeadTiltAction, ETriggerEvent::Canceled, this, &ATPCharacter::HeadTiltReleased);
+		}
 	}
 }
 
@@ -64,11 +90,82 @@ void ATPCharacter::Look(const FInputActionValue& Value)
 {
 	const FVector2D LookAxisVector = Value.Get<FVector2D>();
 	
+	if (ViewModeComp && !ViewModeComp->IsFirstPerson())
+	{
+		return; 
+	}
+	
 	if (!Controller)
 	{
 		return;
 	}
 	
+	if (HeadMovement && HeadMovement->GetIsStretched())
+	{
+		HeadMovement->AddHeadRotation(LookAxisVector.X, LookAxisVector.Y);
+		return;
+	}
+	
 	AddControllerYawInput(LookAxisVector.X);
 	AddControllerPitchInput(LookAxisVector.Y);
+}
+
+void ATPCharacter::StretchLeft()
+{
+	if (ViewModeComp && !ViewModeComp->IsFirstPerson())
+	{
+		return;
+	}
+	
+	if (HeadMovement)
+	{
+		HeadMovement->ToggleStretch(ENeckStretchDirection::Left);
+	}
+}
+
+void ATPCharacter::StretchCenter()
+{
+	if (ViewModeComp && !ViewModeComp->IsFirstPerson())
+	{
+		return;
+	}
+	
+	if (HeadMovement)
+	{
+		HeadMovement->ToggleStretch(ENeckStretchDirection::Center);
+	}
+}
+
+void ATPCharacter::StretchRight()
+{
+	if (ViewModeComp && !ViewModeComp->IsFirstPerson())
+	{
+		return;
+	}
+	
+	if (HeadMovement)
+	{
+		HeadMovement->ToggleStretch(ENeckStretchDirection::Right);
+	}
+}
+
+void ATPCharacter::HeadTiltReleased()
+{
+	if (HeadMovement)
+	{
+		HeadMovement->SetTiltInput(0.f);
+	}
+}
+
+void ATPCharacter::HeadTilt(const FInputActionValue& Value)
+{
+	if (ViewModeComp && !ViewModeComp->IsFirstPerson())
+	{
+		return;
+	}
+	
+	if (HeadMovement)
+	{
+		HeadMovement->SetTiltInput(Value.Get<float>());
+	}
 }
