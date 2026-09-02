@@ -39,6 +39,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Table | Ownership")
 	bool IsOwnedByPlayerState(const APlayerState* PlayerState) const;
 	
+	UFUNCTION(BlueprintPure, Category = "Table Piece")
+	ETablePieceType GetPieceType() const { return PieceType; }
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table")
 	TObjectPtr<UStaticMeshComponent> PieceMesh;
