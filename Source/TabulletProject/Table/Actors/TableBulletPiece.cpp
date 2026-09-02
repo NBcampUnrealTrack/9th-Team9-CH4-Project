@@ -132,4 +132,4 @@ bool ATableBulletPiece::IsOwnedByPlayerState(const APlayerState* PlayerState) co
 {
 	return IsValid(PlayerState) && OwningPlayerState == PlayerState;
 }
-}
+
