@@ -5,7 +5,6 @@
 #include "Components/SceneComponent.h"
 #include "TabulletProject/Table/Actors/TableBulletPiece.h"
 #include "TabulletProject/Table/Components/TableFallJudgeComponent.h"
-#include "EngineUtils.h"
 
 // Sets default values
 AFlickTableBase::AFlickTableBase()
@@ -36,11 +35,16 @@ void AFlickTableBase::Tick(float DeltaSeconds)
 		return;
 	}
 
+	RegisteredPieces.RemoveAll([](const TObjectPtr<ATableBulletPiece>& Piece)
+{
+	return !IsValid(Piece);
+});
+
 	bool bAnyPieceMoving = false;
 
-	for (TActorIterator<ATableBulletPiece> PieceIterator(GetWorld()); PieceIterator; ++PieceIterator)
+	for (ATableBulletPiece* RegisteredPiece : RegisteredPieces)
 	{
-		if (PieceIterator->IsMoving(LinearSpeedThreshold, AngularSpeedThreshold))
+		if (RegisteredPiece->IsMoving(LinearSpeedThreshold, AngularSpeedThreshold))
 		{
 			bAnyPieceMoving = true;
 			break;
