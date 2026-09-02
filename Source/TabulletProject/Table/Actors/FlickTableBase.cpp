@@ -5,6 +5,7 @@
 #include "Components/SceneComponent.h"
 #include "TabulletProject/Table/Actors/TableBulletPiece.h"
 #include "TabulletProject/Table/Components/TableFallJudgeComponent.h"
+#include "EngineUtils.h"
 
 // Sets default values
 AFlickTableBase::AFlickTableBase()
@@ -24,6 +25,48 @@ AFlickTableBase::AFlickTableBase()
 	FallJudge->SetupAttachment(SceneRoot);
 
 	FallJudge->OnPieceEnteredFallJudge.AddDynamic(this,	&AFlickTableBase::HandlePieceEnteredFallJudge);
+}
+
+void AFlickTableBase::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (!HasAuthority() || !bMonitoringPieceMovement)
+	{
+		return;
+	}
+
+	bool bAnyPieceMoving = false;
+
+	for (TActorIterator<ATableBulletPiece> PieceIterator(GetWorld()); PieceIterator; ++PieceIterator)
+	{
+		if (PieceIterator->IsMoving(LinearSpeedThreshold, AngularSpeedThreshold))
+		{
+			bAnyPieceMoving = true;
+			break;
+		}
+	}
+
+	if (bAnyPieceMoving)
+	{
+		SettledElapsedTime = 0.0f;
+		return;
+	}
+
+	SettledElapsedTime += DeltaSeconds;
+
+	if (SettledElapsedTime < RequiredSettledTime)
+	{
+		return;
+	}
+
+	bMonitoringPieceMovement = false;
+	SettledElapsedTime = 0.0f;
+	SetActorTickEnabled(false);
+
+	UE_LOG(LogTemp, Log, TEXT("All table pieces have settled"));
+
+	OnTablePiecesSettled.Broadcast();
 }
 
 void AFlickTableBase::HandlePieceEnteredFallJudge(ATableBulletPiece* FallenPiece)
@@ -63,5 +106,14 @@ bool AFlickTableBase::TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirec
 
 	const FVector Impulse =	FlatDirection * MaxFlickImpulse	* ClampedPower; //  최종 힘. 방향 X 최대 힘 X 파워 비율
 
-	return Piece->ApplyFlickImpulse(Impulse);
+	const bool bFlickApplied = Piece->ApplyFlickImpulse(Impulse);
+
+	if (bFlickApplied)
+	{
+		SettledElapsedTime = 0.0f;
+		bMonitoringPieceMovement = true;
+		SetActorTickEnabled(true);
+	}
+
+	return bFlickApplied;
 }
