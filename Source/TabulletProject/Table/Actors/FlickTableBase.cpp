@@ -75,14 +75,15 @@ void AFlickTableBase::Tick(float DeltaSeconds)
 
 void AFlickTableBase::HandlePieceEnteredFallJudge(ATableBulletPiece* FallenPiece)
 {
-	if (!IsValid(FallenPiece))
+	if (!IsValid(FallenPiece) || !RegisteredPieces.Contains(FallenPiece))
 	{
 		return;
 	}
 
 	UE_LOG(LogTemp,	Log, TEXT("Table piece fell: %s"), *FallenPiece->GetName());
 	
-	FallenPiece->MarkAsOut(); // 판정 나면 TableBulletPiece의 MarkAsOut으로 아웃 처리
+	FallenPiece->MarkAsOut();			// 판정 나면 TableBulletPiece의 MarkAsOut으로 아웃 처리
+	UnregisterPiece(FallenPiece);		// 등록된 총알에서 제거
 }
 
 bool AFlickTableBase::TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower)
@@ -92,7 +93,7 @@ bool AFlickTableBase::TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirec
 		return false;
 	}
 
-	if (!IsValid(Piece))
+	if (!IsValid(Piece) || !RegisteredPieces.Contains(Piece))
 	{
 		return false;
 	}
