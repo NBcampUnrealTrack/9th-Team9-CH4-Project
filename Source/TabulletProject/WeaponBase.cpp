@@ -3,6 +3,7 @@
 #include "WeaponBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/OverlapResult.h"
+#include "TabulletProject/Component/AmmoComponent.h"
 #include "DrawDebugHelpers.h"
 
 AWeaponBase::AWeaponBase()
@@ -49,7 +50,15 @@ void AWeaponBase::InitializeWeaponData()
 void AWeaponBase::Fire()
 {
 	if (!WeaponMesh) return;
-
+	
+	// 탄약 체크 - 없으면 발사 자체를 막음
+	UAmmoComponent* AmmoComp = GetOwner() ? GetOwner()->FindComponentByClass<UAmmoComponent>() : nullptr;
+	if (!AmmoComp || !AmmoComp->TryConsumeAmmo(WeaponType))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Weapon] 탄약 없음, 발사 취소: %s"), *UEnum::GetValueAsString(WeaponType));
+		return;
+	}
+	
 	FVector StartLocation = WeaponMesh->GetSocketLocation(TEXT("MuzzleSocket"));
 	FVector ForwardVector = WeaponMesh->GetSocketRotation(TEXT("MuzzleSocket")).Vector();
 

@@ -4,6 +4,9 @@
 #include "GameFramework/PlayerController.h"
 #include "TPPlayerController.generated.h"
 
+class AFlickTableBase;
+class ATableBulletPiece;
+
 /**
  * 
  */
@@ -15,4 +18,10 @@ class TABULLETPROJECT_API ATPPlayerController : public APlayerController
 public:
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Ready")
 	void ServerSetReady(bool bReady);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Table | Flick")
+	void ServerRequestFlick(AFlickTableBase* Table, ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower);
+
+	UFUNCTION(BlueprintPure, Category = "Turn")
+	bool IsMyTurn() const;
 };
