@@ -5,10 +5,8 @@
 
 #include "Blueprint/UserWidget.h"
 #include "Components/TextBlock.h"
-#include "GameFramework/PlayerState.h"
 #include "TPGameState.h"
 #include "TPPlayerController.h"
-#include "TPPlayerState.h"
 
 ATPPlayerHUD::ATPPlayerHUD()
 {
@@ -149,26 +147,11 @@ FText ATPPlayerHUD::GetMatchStatusText() const
 
 FText ATPPlayerHUD::GetTurnText() const
 {
-	const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
-	if (!TPGameState || TPGameState->MatchPhase != ETabulletMatchPhase::InGame)
+	const ATPPlayerController* TPPlayerController = Cast<ATPPlayerController>(GetOwningPlayerController());
+	if (!TPPlayerController)
 	{
 		return FText::GetEmpty();
 	}
 
-	const ATPPlayerController* TPPlayerController = Cast<ATPPlayerController>(GetOwningPlayerController());
-	if (TPPlayerController && TPPlayerController->IsMyTurn())
-	{
-		return FText::Format(NSLOCTEXT("TPPlayerHUD", "YourTurnFormat", "Turn {0} - Your Turn"), TPGameState->TurnNumber);
-	}
-
-	const ATPPlayerState* CurrentTurnPlayerState = Cast<ATPPlayerState>(TPGameState->CurrentTurnPlayerState);
-	if (!CurrentTurnPlayerState)
-	{
-		return FText::Format(NSLOCTEXT("TPPlayerHUD", "TurnWaitingFormat", "Turn {0}"), TPGameState->TurnNumber);
-	}
-
-	return FText::Format(
-		NSLOCTEXT("TPPlayerHUD", "OtherPlayerTurnFormat", "Turn {0} - Player {1} Turn"),
-		TPGameState->TurnNumber,
-		CurrentTurnPlayerState->PlayerIndex + 1);
+	return TPPlayerController->GetCurrentTurnText();
 }
