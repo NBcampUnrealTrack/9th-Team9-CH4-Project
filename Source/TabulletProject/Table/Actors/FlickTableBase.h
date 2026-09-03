@@ -71,13 +71,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Flick", meta = (ClampMin = "0.0"))
 	float MaxFlickImpulse = 40.0f;		// 최대 파워인데 나중에 수정해야 함. 현재는 테스트하면서 해본 임시값
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Movement", meta = (ClampMin = "0.0"))
-	float LinearSpeedThreshold = 2.0f;			// 무시 속도
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Movement", meta = (ClampMin = "0.0"))
+	float LinearSpeedThreshold = 10.0f;			// 무시 속도
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Movement", meta = (ClampMin = "0.0"))
-	float AngularSpeedThreshold = 2.0f;			// 무시 회전 속도
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Movement", meta = (ClampMin = "0.0"))
+	float AngularSpeedThreshold = 10.0f;			// 무시 회전 속도
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Movement", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Movement", meta = (ClampMin = "0.0"))
 	float RequiredSettledTime = 0.5f;			// 무시까지 걸리는 시간
 
 	float SettledElapsedTime = 0.0f;
