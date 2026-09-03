@@ -5,11 +5,14 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "TabulletProject/Table/Core/TableTypes.h"
+#include "TabulletProject/WeaponType.h"
 #include "FlickTableBase.generated.h"
 
 class ATableBulletPiece;
 class UTableFallJudgeComponent;
 class APlayerState;
+class UTablePieceSpawnComponent;
+class USceneComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTablePiecesSettled);
 UCLASS()
@@ -23,6 +26,8 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category = "Table | Movement")
 	FOnTablePiecesSettled OnTablePiecesSettled;
+	
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSpecialPieceCaptured, APlayerState*, CapturingPlayer, EWeaponType, WeaponType);
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Flick")
 	bool TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower);
@@ -41,6 +46,15 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category = "Table | Piece Registry")
 	int32 GetRegisteredPieceCountByType(ETablePieceType PieceType) const;
+	
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Spawn")
+	int32 SpawnNormalPiecesForPlayers(const TArray<APlayerState*>& Players, int32 PiecesPerPlayer);
+	
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Spawn")
+	int32 SpawnSpecialPieces(int32 PieceCount);
+	
+	UPROPERTY(BlueprintAssignable, Category = "Table | Reward")
+	FOnSpecialPieceCaptured OnSpecialPieceCaptured;
 	
 protected:
 	virtual void Tick(float DeltaSeconds) override;
@@ -72,4 +86,25 @@ protected:
 	
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<ATableBulletPiece>> RegisteredPieces;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table")
+	TObjectPtr<UTablePieceSpawnComponent> PieceSpawner;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table | Spawn")
+	TObjectPtr<USceneComponent> Player1SpawnOrigin;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table | Spawn")
+	TObjectPtr<USceneComponent> Player2SpawnOrigin;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table | Spawn")
+	TObjectPtr<USceneComponent> Player3SpawnOrigin;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table | Spawn")
+	TObjectPtr<USceneComponent> Player4SpawnOrigin;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table | Spawn")
+	TObjectPtr<USceneComponent> SpecialPieceSpawnOrigin;
+	
+	UPROPERTY(Transient)
+	TObjectPtr<APlayerState> ActiveFlickPlayerState;
 };
