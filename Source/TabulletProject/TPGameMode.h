@@ -26,7 +26,6 @@ public:
 	virtual void Logout(AController* Exiting) override;
 	virtual void HandleMatchHasStarted() override;
 
-	void SetPlayerReady(AController* Player, bool bReady);
 	bool CanStartGame() const;
 	void StartGame();
 	bool RequestFlick(AController* RequestingController, AFlickTableBase* Table, ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower);
@@ -47,6 +46,8 @@ public:
 	void RecalculatePlayerPieceCounts();
 
 protected:
+	void BeginStartCountdown();
+	void CancelStartCountdown();
 	void InitializeTurnOrder();
 	void StartFirstTurn();
 	void SetCurrentTurnByIndex(int32 NewTurnIndex);
@@ -57,6 +58,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Match", meta = (ClampMin = "1"))
 	int32 RequiredPlayerCount = 4;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Match", meta = (ClampMin = "0.0"))
+	float AutoStartDelay = 3.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Turn", meta = (ClampMin = "0.01"))
 	float ResolveCheckInterval = 0.25f;
@@ -71,6 +75,7 @@ protected:
 	TArray<TObjectPtr<APlayerState>> TurnOrder;
 
 	int32 CurrentTurnIndex = INDEX_NONE;
+	FTimerHandle StartMatchTimerHandle;
 	FTimerHandle ResolveCheckTimerHandle;
 	float ResolveStartedTime = 0.0f;
 };

@@ -3,7 +3,9 @@
 
 #include "TPGameMode.h"
 
+#include "Character/TPCharacter.h"
 #include "TPGameState.h"
+#include "TPPlayerHUD.h"
 #include "TPPlayerController.h"
 #include "TPPlayerState.h"
 #include "EngineUtils.h"
@@ -12,9 +14,12 @@
 
 ATPGameMode::ATPGameMode()
 {
+	bDelayedStart = true;
 	GameStateClass = ATPGameState::StaticClass();
 	PlayerControllerClass = ATPPlayerController::StaticClass();
 	PlayerStateClass = ATPPlayerState::StaticClass();
+	DefaultPawnClass = ATPCharacter::StaticClass();
+	HUDClass = ATPPlayerHUD::StaticClass();
 }
 
 void ATPGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -55,7 +60,7 @@ void ATPGameMode::PostLogin(APlayerController* NewPlayer)
 		TPGameState->SetMatchPhase(NumPlayers >= RequiredPlayerCount ? ETabulletMatchPhase::ReadyCheck : ETabulletMatchPhase::WaitingForPlayers);
 	}
 
-	StartGame();
+	BeginStartCountdown();
 }
 
 void ATPGameMode::Logout(AController* Exiting)
@@ -66,7 +71,6 @@ void ATPGameMode::Logout(AController* Exiting)
 
 	if (ATPPlayerState* TPPlayerState = Exiting ? Exiting->GetPlayerState<ATPPlayerState>() : nullptr)
 	{
-		TPPlayerState->SetReady(false);
 		TPPlayerState->SetEliminated(true);
 	}
 
@@ -85,6 +89,14 @@ void ATPGameMode::Logout(AController* Exiting)
 			}
 
 			TPGameState->SetMatchPhase(NumPlayers >= RequiredPlayerCount ? ETabulletMatchPhase::ReadyCheck : ETabulletMatchPhase::WaitingForPlayers);
+			if (NumPlayers < RequiredPlayerCount)
+			{
+				CancelStartCountdown();
+			}
+			else
+			{
+				BeginStartCountdown();
+			}
 		}
 		else if (GetMatchState() == MatchState::InProgress && ExitingPlayerState)
 		{
@@ -122,37 +134,12 @@ void ATPGameMode::HandleMatchHasStarted()
 	StartFirstTurn();
 }
 
-void ATPGameMode::SetPlayerReady(AController* Player, bool bReady)
-{
-	const ATPGameState* TPGameState = GetGameState<ATPGameState>();
-	if (!TPGameState || TPGameState->MatchPhase != ETabulletMatchPhase::ReadyCheck)
-	{
-		return;
-	}
-
-	if (ATPPlayerState* TPPlayerState = Player ? Player->GetPlayerState<ATPPlayerState>() : nullptr)
-	{
-		TPPlayerState->SetReady(bReady);
-	}
-
-	StartGame();
-}
-
 bool ATPGameMode::CanStartGame() const
 {
 	const ATPGameState* TPGameState = GetGameState<ATPGameState>();
 	if (!TPGameState || TPGameState->PlayerArray.Num() != RequiredPlayerCount || GetMatchState() != MatchState::WaitingToStart)
 	{
 		return false;
-	}
-
-	for (APlayerState* PlayerState : TPGameState->PlayerArray)
-	{
-		const ATPPlayerState* TPPlayerState = Cast<ATPPlayerState>(PlayerState);
-		if (!TPPlayerState || !TPPlayerState->bIsReady)
-		{
-			return false;
-		}
 	}
 
 	return true;
@@ -162,7 +149,46 @@ void ATPGameMode::StartGame()
 {
 	if (CanStartGame())
 	{
+		GetWorldTimerManager().ClearTimer(StartMatchTimerHandle);
+		UE_LOG(LogTemp, Log, TEXT("Required players connected. Starting match."));
 		StartMatch();
+	}
+}
+
+void ATPGameMode::BeginStartCountdown()
+{
+	if (!HasAuthority() || !CanStartGame() || GetWorldTimerManager().IsTimerActive(StartMatchTimerHandle))
+	{
+		return;
+	}
+
+	if (ATPGameState* TPGameState = GetGameState<ATPGameState>())
+	{
+		TPGameState->SetMatchPhase(ETabulletMatchPhase::ReadyCheck);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Required players connected. Match starts in %.1f seconds."), AutoStartDelay);
+
+	if (AutoStartDelay <= 0.0f)
+	{
+		StartGame();
+		return;
+	}
+
+	GetWorldTimerManager().SetTimer(StartMatchTimerHandle, this, &ATPGameMode::StartGame, AutoStartDelay, false);
+}
+
+void ATPGameMode::CancelStartCountdown()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (GetWorldTimerManager().IsTimerActive(StartMatchTimerHandle))
+	{
+		GetWorldTimerManager().ClearTimer(StartMatchTimerHandle);
+		UE_LOG(LogTemp, Log, TEXT("Match start countdown canceled. Waiting for players."));
 	}
 }
 
