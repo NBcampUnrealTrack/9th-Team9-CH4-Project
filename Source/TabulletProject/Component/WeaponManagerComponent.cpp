@@ -55,11 +55,6 @@ void UWeaponManagerComponent::SpawnAllWeapons()
 
 void UWeaponManagerComponent::SwitchWeapon(EWeaponType NewType)
 {
-	if (AActor* Owner = GetOwner())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[SwitchWeapon] Owner=%s, HasAuthority=%d, Role=%d"),
-			*Owner->GetName(), Owner->HasAuthority(), (int32)Owner->GetLocalRole());
-	}
 	ServerSwitchWeapon(NewType);
 }
 
