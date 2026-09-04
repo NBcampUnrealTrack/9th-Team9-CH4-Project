@@ -12,6 +12,8 @@ class UInputMappingContext;
 class UInputAction;
 class UHeadMovementComponent;
 class UViewModeComponent;
+class UInteractionComponent;
+class UAimAndShootComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -43,6 +45,12 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "HeadMovement")
 	TObjectPtr<UHeadMovementComponent> HeadMovement;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
+	TObjectPtr<UInteractionComponent> Interaction;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AimAndShoot")
+	TObjectPtr<UAimAndShootComponent> AimAndShoot;
+	
 	UPROPERTY()
 	TObjectPtr<UViewModeComponent> ViewModeComp;
 	
@@ -63,8 +71,12 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> HeadTiltAction;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> FireAction;
     
     void StretchLeft();
     void StretchCenter();
     void StretchRight();
 };
+
