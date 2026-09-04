@@ -14,6 +14,7 @@ class UHeadMovementComponent;
 class UViewModeComponent;
 class UInteractionComponent;
 class UAimAndShootComponent;
+class UHealthComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -50,6 +51,18 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AimAndShoot")
 	TObjectPtr<UAimAndShootComponent> AimAndShoot;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health")
+	TObjectPtr<UHealthComponent> Health;
+	
+	UFUNCTION(BlueprintPure, Category = "Health")
+	UHealthComponent* GetHealthComponent() const { return Health; }
+	
+	UFUNCTION(Exec)
+	void DebugDamage(float Amount);
+	
+	UFUNCTION(Server, Reliable)
+	void ServerDebugDamage(float Amount);
 	
 	UPROPERTY()
 	TObjectPtr<UViewModeComponent> ViewModeComp;
