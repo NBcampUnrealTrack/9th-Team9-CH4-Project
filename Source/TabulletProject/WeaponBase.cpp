@@ -4,12 +4,15 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/OverlapResult.h"
 #include "TabulletProject/Component/AmmoComponent.h"
+#include "TabulletProject/Component/HealthComponent.h"
+#include "TabulletProject/Character/TPCharacter.h"
 #include "DrawDebugHelpers.h"
 
 AWeaponBase::AWeaponBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
-
+	bReplicates = true;
+	
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
 	RootComponent = WeaponMesh;
 }
@@ -24,10 +27,6 @@ void AWeaponBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
-
-// TODO : 지금은 로컬에서 바로 판정하는 임시 버전.
-// TODO : 멀티플레이 단계에서는 이 안의 라인트레이스 로직을 Server_Fire()로 옮기고
-// TODO : 여기서는 Server_Fire()를 호출하는 것으로 바꿔야 함
 
 void AWeaponBase::InitializeWeaponData()
 {
@@ -49,62 +48,82 @@ void AWeaponBase::InitializeWeaponData()
 
 void AWeaponBase::Fire()
 {
-	if (!WeaponMesh) return;
-	
-	// 탄약 체크 - 없으면 발사 자체를 막음
-	UAmmoComponent* AmmoComp = GetOwner() ? GetOwner()->FindComponentByClass<UAmmoComponent>() : nullptr;
-	if (!AmmoComp || !AmmoComp->TryConsumeAmmo(WeaponType))
+	Server_Fire();
+}
+
+bool AWeaponBase::Server_Fire_Validate()
+{
+	return true;   // 필요시 나중에 검증 로직 추가
+}
+
+void AWeaponBase::Server_Fire_Implementation()
+{
+    if (!WeaponMesh) return;
+
+    UAmmoComponent* AmmoComp = GetOwner() ? GetOwner()->FindComponentByClass<UAmmoComponent>() : nullptr;
+    if (!AmmoComp || !AmmoComp->TryConsumeAmmo(WeaponType))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Weapon] 탄약 없음, 발사 취소: %s"), *UEnum::GetValueAsString(WeaponType));
+        return;
+    }
+
+    FVector StartLocation = WeaponMesh->GetSocketLocation(TEXT("MuzzleSocket"));
+    FVector ForwardVector = WeaponMesh->GetSocketRotation(TEXT("MuzzleSocket")).Vector();
+
+    FCollisionQueryParams QueryParams;
+    QueryParams.AddIgnoredActor(this);
+
+    int32 NumPellets = FMath::Max(PelletCount, 1);
+    TSet<AActor*> HitActors;
+
+    TArray<FVector> DebugStarts;
+    TArray<FVector> DebugEnds;
+
+    for (int32 i = 0; i < NumPellets; i++)
+    {
+        float AngleOffset = 0.0f;
+        if (NumPellets > 1)
+        {
+            AngleOffset = -SpreadAngle * 0.5f + (SpreadAngle / (NumPellets - 1)) * i;
+        }
+
+        FVector PelletDirection = ForwardVector.RotateAngleAxis(AngleOffset, FVector::UpVector);
+        FVector EndLocation = StartLocation + (PelletDirection * Range);
+
+        FHitResult HitResult;
+        bool bHit = GetWorld()->LineTraceSingleByChannel(
+            HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams);
+
+        DebugStarts.Add(StartLocation);
+        DebugEnds.Add(EndLocation);
+
+        if (bHit)
+        {
+            AActor* HitActor = HitResult.GetActor();
+            if (HitActor && !HitActors.Contains(HitActor))
+            {
+                HitActors.Add(HitActor);
+
+                UE_LOG(LogTemp, Warning, TEXT("%s hit %s with %s (Damage: %.1d)"),
+                    *GetName(), *HitActor->GetName(), *UEnum::GetValueAsString(WeaponType), Damage);
+
+            	ATPCharacter* HitCharacter = Cast<ATPCharacter>(HitActor);
+            	if (HitCharacter && HitCharacter->GetHealthComponent())
+            	{
+            		AController* KillerController = GetOwner() ? GetOwner()->GetInstigatorController() : nullptr;
+            		HitCharacter->GetHealthComponent()->ApplyHealthDamage(Damage, KillerController);
+            	}
+            }
+        }
+    }
+
+    Multicast_FireEffect(DebugStarts, DebugEnds);
+}
+
+void AWeaponBase::Multicast_FireEffect_Implementation(const TArray<FVector>& StartPoints, const TArray<FVector>& EndPoints)
+{
+	for (int32 i = 0; i < StartPoints.Num(); i++)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Weapon] 탄약 없음, 발사 취소: %s"), *UEnum::GetValueAsString(WeaponType));
-		return;
-	}
-	
-	FVector StartLocation = WeaponMesh->GetSocketLocation(TEXT("MuzzleSocket"));
-	FVector ForwardVector = WeaponMesh->GetSocketRotation(TEXT("MuzzleSocket")).Vector();
-
-	FCollisionQueryParams QueryParams;
-	QueryParams.AddIgnoredActor(this);
-
-	int32 NumPellets = FMath::Max(PelletCount, 1);
-	
-	TSet<AActor*> HitActors; // 발사에서 이미 맞은 엑터 기록
-
-	for (int32 i = 0; i < NumPellets; i++)
-	{
-		float AngleOffset = 0.0f;
-		if (NumPellets > 1)
-		{
-			AngleOffset = -SpreadAngle * 0.5f + (SpreadAngle / (NumPellets - 1)) * i;
-		}
-
-		// 좌우회전으로 방향
-		FVector PelletDirection = ForwardVector.RotateAngleAxis(AngleOffset, FVector::UpVector);
-		FVector EndLocation = StartLocation + (PelletDirection * Range);
-
-		FHitResult HitResult;
-		bool bHit = GetWorld()->LineTraceSingleByChannel(
-			HitResult,
-			StartLocation,
-			EndLocation,
-			ECC_Visibility,
-			QueryParams
-		);
-
-		DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, 1.0f, 0, 1.0f);
-
-		if (bHit)
-		{
-			AActor* HitActor = HitResult.GetActor();
-			if (HitActor && !HitActors.Contains(HitActor)) //중복체크
-			{
-				HitActors.Add(HitActor);
-				
-				UE_LOG(LogTemp, Warning, TEXT("%s hit %s with %s (Damage: %.1d)"),
-					*GetName(), *HitActor->GetName(), *UEnum::GetValueAsString(WeaponType), Damage);
-
-				// TODO : 실제 데미지 적용 로직 (UGameplayStatics::ApplyDamage 등)
-				// TODO : 서버 권위 붙이면 이 블록 전체 Server_Fire() 안으로 이동
-			}
-		}
+		DrawDebugLine(GetWorld(), StartPoints[i], EndPoints[i], FColor::Red, false, 1.0f, 0, 1.0f);
 	}
 }

@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "TPCharacter.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -8,6 +7,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "../Component/HeadMovementComponent.h"
 #include "../Component/ViewModeComponent.h"
+#include "../Component/InteractionComponent.h"
+#include "../Component/AimAndShootComponent.h"
+#include "../Component/AmmoComponent.h"
+#include "../Component/HealthComponent.h"
 
 // Sets default values
 ATPCharacter::ATPCharacter()
@@ -29,6 +32,9 @@ ATPCharacter::ATPCharacter()
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 	Camera->bUsePawnControlRotation = false;
 	HeadMovement = CreateDefaultSubobject<UHeadMovementComponent>(TEXT("HeadMovement"));
+	Interaction = CreateDefaultSubobject<UInteractionComponent>(TEXT("Interaction"));
+	AimAndShoot = CreateDefaultSubobject<UAimAndShootComponent>(TEXT("AimAndShoot"));
+	Health = CreateDefaultSubobject<UHealthComponent>(TEXT("Health"));
 }
 
 // Called when the game starts or when spawned
@@ -47,6 +53,32 @@ void ATPCharacter::BeginPlay()
 				Subsystem->AddMappingContext(DefaultMappingContext, 0);
 			}
 		}
+	}
+	
+	// 발사 테스트용
+	if (HasAuthority())
+	{
+		if (UAmmoComponent* Ammo = FindComponentByClass<UAmmoComponent>())
+		{
+			Ammo->SetAmmoCount(EWeaponType::Revolver, 10);
+			Ammo->SetAmmoCount(EWeaponType::Shotgun, 10);
+			Ammo->SetAmmoCount(EWeaponType::Sniper, 10);
+		}
+	}
+}
+
+void ATPCharacter::DebugDamage(float Amount)
+{
+	ServerDebugDamage(Amount);
+}
+
+void ATPCharacter::ServerDebugDamage_Implementation(float Amount)
+{
+	if (Health)
+	{
+		const float Applied = Health->ApplyHealthDamage(Amount, GetController());
+		UE_LOG(LogTemp, Warning, TEXT("DebugDamage: %.1f applied, Health now %.1f"),
+			Applied, Health->GetHealth());
 	}
 }
 
@@ -82,6 +114,11 @@ void ATPCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 			EnhancedInput->BindAction(HeadTiltAction, ETriggerEvent::Triggered, this, &ATPCharacter::HeadTilt);
 			EnhancedInput->BindAction(HeadTiltAction, ETriggerEvent::Completed, this , &ATPCharacter::HeadTiltReleased);
 			EnhancedInput->BindAction(HeadTiltAction, ETriggerEvent::Canceled, this, &ATPCharacter::HeadTiltReleased);
+		}
+		
+		if (FireAction && AimAndShoot)
+		{
+			EnhancedInput->BindAction(FireAction.Get(), ETriggerEvent::Started, AimAndShoot.Get(), &UAimAndShootComponent::HandleFireStarted);
 		}
 	}
 }
@@ -169,3 +206,4 @@ void ATPCharacter::HeadTilt(const FInputActionValue& Value)
 		HeadMovement->SetTiltInput(Value.Get<float>());
 	}
 }
+
