@@ -9,7 +9,8 @@
 #include "../Component/ViewModeComponent.h"
 #include "../Component/InteractionComponent.h"
 #include "../Component/AimAndShootComponent.h"
-#include "TabulletProject/Component/AmmoComponent.h"
+#include "../Component/AmmoComponent.h"
+#include "../Component/HealthComponent.h"
 
 // Sets default values
 ATPCharacter::ATPCharacter()
@@ -33,6 +34,7 @@ ATPCharacter::ATPCharacter()
 	HeadMovement = CreateDefaultSubobject<UHeadMovementComponent>(TEXT("HeadMovement"));
 	Interaction = CreateDefaultSubobject<UInteractionComponent>(TEXT("Interaction"));
 	AimAndShoot = CreateDefaultSubobject<UAimAndShootComponent>(TEXT("AimAndShoot"));
+	Health = CreateDefaultSubobject<UHealthComponent>(TEXT("Health"));
 }
 
 // Called when the game starts or when spawned
@@ -62,6 +64,21 @@ void ATPCharacter::BeginPlay()
 			Ammo->SetAmmoCount(EWeaponType::Shotgun, 10);
 			Ammo->SetAmmoCount(EWeaponType::Sniper, 10);
 		}
+	}
+}
+
+void ATPCharacter::DebugDamage(float Amount)
+{
+	ServerDebugDamage(Amount);
+}
+
+void ATPCharacter::ServerDebugDamage_Implementation(float Amount)
+{
+	if (Health)
+	{
+		const float Applied = Health->ApplyHealthDamage(Amount, GetController());
+		UE_LOG(LogTemp, Warning, TEXT("DebugDamage: %.1f applied, Health now %.1f"),
+			Applied, Health->GetHealth());
 	}
 }
 
