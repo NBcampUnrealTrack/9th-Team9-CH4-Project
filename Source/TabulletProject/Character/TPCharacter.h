@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// TPCharacter.h
 
 #pragma once
 
@@ -12,6 +12,7 @@ class UInputMappingContext;
 class UInputAction;
 class UHeadMovementComponent;
 class UViewModeComponent;
+class UInteractionComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -42,6 +43,9 @@ public:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "HeadMovement")
 	TObjectPtr<UHeadMovementComponent> HeadMovement;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
+	TObjectPtr<UInteractionComponent> Interaction;
 	
 	UPROPERTY()
 	TObjectPtr<UViewModeComponent> ViewModeComp;
