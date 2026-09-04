@@ -41,6 +41,12 @@ protected:
 
 	UFUNCTION()
 	void OnRep_CurrentWeaponType();
+	
+	UPROPERTY(ReplicatedUsing = OnRep_WeaponArray)
+	TArray<TObjectPtr<AWeaponBase>> ReplicatedWeapons;
+
+	UFUNCTION()
+	void OnRep_WeaponArray();
 
 	void ApplyWeaponSwitch(EWeaponType NewType);
 
