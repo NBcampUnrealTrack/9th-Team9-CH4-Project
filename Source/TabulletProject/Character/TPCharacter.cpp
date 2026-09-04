@@ -1,5 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// TPCharacter.cpp
 
 #include "TPCharacter.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -8,6 +7,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "../Component/HeadMovementComponent.h"
 #include "../Component/ViewModeComponent.h"
+#include "../Component/InteractionComponent.h"
 
 // Sets default values
 ATPCharacter::ATPCharacter()
@@ -29,6 +29,7 @@ ATPCharacter::ATPCharacter()
 	Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 	Camera->bUsePawnControlRotation = false;
 	HeadMovement = CreateDefaultSubobject<UHeadMovementComponent>(TEXT("HeadMovement"));
+	Interaction = CreateDefaultSubobject<UInteractionComponent>(TEXT("Interaction"));
 }
 
 // Called when the game starts or when spawned
