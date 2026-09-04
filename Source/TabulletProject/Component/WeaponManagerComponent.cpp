@@ -28,6 +28,8 @@ void UWeaponManagerComponent::SpawnAllWeapons()
 	auto SpawnAndAttach = [&](TSubclassOf<AWeaponBase> Class, EWeaponType Type)
 	{
 		if (!Class) return;
+		
+		if (!OwnerCharacter->HasAuthority()) return; //서버만 스폰
 
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = OwnerCharacter;
@@ -39,6 +41,7 @@ void UWeaponManagerComponent::SpawnAllWeapons()
 				FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocketName);
 			NewWeapon->SetActorHiddenInGame(true);
 			WeaponInstances.Add(Type, NewWeapon);
+			ReplicatedWeapons.Add(NewWeapon);
 		}
 	};
 
@@ -68,6 +71,19 @@ void UWeaponManagerComponent::ServerSwitchWeapon_Implementation(EWeaponType NewT
 
 void UWeaponManagerComponent::OnRep_CurrentWeaponType()
 {
+	ApplyWeaponSwitch(CurrentWeaponType);
+}
+
+void UWeaponManagerComponent::OnRep_WeaponArray()
+{
+	WeaponInstances.Empty();
+	for (AWeaponBase* Weapon : ReplicatedWeapons)
+	{
+		if (Weapon)
+		{
+			WeaponInstances.Add(Weapon->WeaponType, Weapon);
+		}
+	}
 	ApplyWeaponSwitch(CurrentWeaponType);
 }
 
@@ -120,5 +136,6 @@ void UWeaponManagerComponent::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UWeaponManagerComponent, CurrentWeaponType);
+	DOREPLIFETIME(UWeaponManagerComponent, ReplicatedWeapons);
 }
 
