@@ -3,14 +3,6 @@
 #include "TPGameMode.h"
 #include "TPGameState.h"
 
-void ATPPlayerController::ServerSetReady_Implementation(bool bReady)
-{
-	if (ATPGameMode* TPGameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ATPGameMode>() : nullptr)
-	{
-		TPGameMode->SetPlayerReady(this, bReady);
-	}
-}
-
 void ATPPlayerController::ServerRequestFlick_Implementation(AFlickTableBase* Table, ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower)
 {
 	if (ATPGameMode* TPGameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ATPGameMode>() : nullptr)

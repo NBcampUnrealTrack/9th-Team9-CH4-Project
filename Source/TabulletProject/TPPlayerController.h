@@ -16,9 +16,6 @@ class TABULLETPROJECT_API ATPPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Ready")
-	void ServerSetReady(bool bReady);
-
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Table | Flick")
 	void ServerRequestFlick(AFlickTableBase* Table, ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower);
 

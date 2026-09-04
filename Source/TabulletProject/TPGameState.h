@@ -10,7 +10,7 @@ UENUM(BlueprintType)
 enum class ETabulletMatchPhase : uint8
 {
 	WaitingForPlayers,
-	ReadyCheck,
+	Starting,
 	InGame,
 	GameOver
 };

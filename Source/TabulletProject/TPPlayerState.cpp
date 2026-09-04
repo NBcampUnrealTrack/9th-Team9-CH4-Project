@@ -5,15 +5,6 @@
 
 #include "Net/UnrealNetwork.h"
 
-void ATPPlayerState::SetReady(bool bReady)
-{
-	if (HasAuthority() && bIsReady != bReady)
-	{
-		bIsReady = bReady;
-		OnReadyChanged(bIsReady);
-	}
-}
-
 void ATPPlayerState::SetPlayerIndex(int32 NewPlayerIndex)
 {
 	if (HasAuthority() && PlayerIndex != NewPlayerIndex)
@@ -41,11 +32,6 @@ void ATPPlayerState::SetEliminated(bool bNewIsEliminated)
 	}
 }
 
-void ATPPlayerState::OnRep_IsReady()
-{
-	OnReadyChanged(bIsReady);
-}
-
 void ATPPlayerState::OnRep_PlayerIndex()
 {
 	OnPlayerIndexChanged(PlayerIndex);
@@ -65,7 +51,6 @@ void ATPPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ATPPlayerState, bIsReady);
 	DOREPLIFETIME(ATPPlayerState, PlayerIndex);
 	DOREPLIFETIME(ATPPlayerState, RemainingPieceCount);
 	DOREPLIFETIME(ATPPlayerState, bIsEliminated);
