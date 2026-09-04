@@ -57,7 +57,7 @@ void ATPGameMode::PostLogin(APlayerController* NewPlayer)
 			}
 		}
 
-		TPGameState->SetMatchPhase(NumPlayers >= RequiredPlayerCount ? ETabulletMatchPhase::ReadyCheck : ETabulletMatchPhase::WaitingForPlayers);
+		TPGameState->SetMatchPhase(NumPlayers >= RequiredPlayerCount ? ETabulletMatchPhase::Starting : ETabulletMatchPhase::WaitingForPlayers);
 	}
 
 	BeginStartCountdown();
@@ -88,7 +88,7 @@ void ATPGameMode::Logout(AController* Exiting)
 				}
 			}
 
-			TPGameState->SetMatchPhase(NumPlayers >= RequiredPlayerCount ? ETabulletMatchPhase::ReadyCheck : ETabulletMatchPhase::WaitingForPlayers);
+			TPGameState->SetMatchPhase(NumPlayers >= RequiredPlayerCount ? ETabulletMatchPhase::Starting : ETabulletMatchPhase::WaitingForPlayers);
 			if (NumPlayers < RequiredPlayerCount)
 			{
 				CancelStartCountdown();
@@ -164,7 +164,7 @@ void ATPGameMode::BeginStartCountdown()
 
 	if (ATPGameState* TPGameState = GetGameState<ATPGameState>())
 	{
-		TPGameState->SetMatchPhase(ETabulletMatchPhase::ReadyCheck);
+		TPGameState->SetMatchPhase(ETabulletMatchPhase::Starting);
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("Required players connected. Match starts in %.1f seconds."), AutoStartDelay);
