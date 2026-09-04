@@ -1,14 +1,15 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+// WeaponManagerComponent.cpp
 
 #include "WeaponManagerComponent.h"
 #include "TabulletProject/WeaponBase.h"
 #include "EnhancedInputComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "GameFramework/Character.h"
 
 UWeaponManagerComponent::UWeaponManagerComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+	SetIsReplicatedByDefault(true);
 }
 
 void UWeaponManagerComponent::BeginPlay()
@@ -51,6 +52,22 @@ void UWeaponManagerComponent::SpawnAllWeapons()
 
 void UWeaponManagerComponent::SwitchWeapon(EWeaponType NewType)
 {
+	ServerSwitchWeapon(NewType);
+}
+
+void UWeaponManagerComponent::ServerSwitchWeapon_Implementation(EWeaponType NewType)
+{
+	CurrentWeaponType = NewType;
+	ApplyWeaponSwitch(NewType);
+}
+
+void UWeaponManagerComponent::OnRep_CurrentWeaponType()
+{
+	ApplyWeaponSwitch(CurrentWeaponType);
+}
+
+void UWeaponManagerComponent::ApplyWeaponSwitch(EWeaponType NewType)
+{
 	TObjectPtr<AWeaponBase>* Found = WeaponInstances.Find(NewType);
 	if (!Found || !*Found) return;
 
@@ -92,3 +109,11 @@ void UWeaponManagerComponent::TryBindInput()
 void UWeaponManagerComponent::OnWeapon1(const FInputActionValue& Value) { SwitchWeapon(EWeaponType::Revolver); }
 void UWeaponManagerComponent::OnWeapon2(const FInputActionValue& Value) { SwitchWeapon(EWeaponType::Shotgun); }
 void UWeaponManagerComponent::OnWeapon3(const FInputActionValue& Value) { SwitchWeapon(EWeaponType::Sniper); }
+
+void UWeaponManagerComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UWeaponManagerComponent, CurrentWeaponType);
+}
+
