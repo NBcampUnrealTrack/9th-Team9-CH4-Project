@@ -21,7 +21,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void SwitchWeapon(EWeaponType NewType);
-
+	
+	UFUNCTION(Server, Reliable)
+	void ServerSwitchWeapon(EWeaponType NewType);
+	
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void FireCurrentWeapon();
 
@@ -30,6 +33,16 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentWeaponType)
+	EWeaponType CurrentWeaponType;
+
+	UFUNCTION()
+	void OnRep_CurrentWeaponType();
+
+	void ApplyWeaponSwitch(EWeaponType NewType);
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<AWeaponBase> RevolverClass;
