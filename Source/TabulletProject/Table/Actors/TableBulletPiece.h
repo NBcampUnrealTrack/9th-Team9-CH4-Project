@@ -5,10 +5,12 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "TabulletProject/Table/Core/TableTypes.h"
+#include "TabulletProject/WeaponType.h"
 #include "TableBulletPiece.generated.h"
 
 class APlayerState;
 class UStaticMeshComponent;
+enum class EWeaponType : uint8;
 
 UCLASS()
 class TABULLETPROJECT_API ATableBulletPiece : public AActor
@@ -42,12 +44,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Table Piece")
 	ETablePieceType GetPieceType() const { return PieceType; }
 	
+	UFUNCTION(BlueprintPure, Category = "Table Piece")
+	EWeaponType GetRewardWeaponType() const { return RewardWeaponType; }
+	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table")
 	TObjectPtr<UStaticMeshComponent> PieceMesh;
 	
 	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadOnly, Category = "Table")
 	ETablePieceType PieceType = ETablePieceType::Normal;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Piece", meta = (EditCondition = "PieceType == ETablePieceType::Special", EditConditionHides))
+	EWeaponType RewardWeaponType;
 	
 	UPROPERTY(ReplicatedUsing = OnRep_PieceState, VisibleInstanceOnly, BlueprintReadOnly, Category = "Table Piece")
 	ETablePieceState PieceState = ETablePieceState::OnTable;

@@ -5,6 +5,9 @@
 #include "Components/SceneComponent.h"
 #include "TabulletProject/Table/Actors/TableBulletPiece.h"
 #include "TabulletProject/Table/Components/TableFallJudgeComponent.h"
+#include "TabulletProject/Table/Components/TablePieceSpawnComponent.h"
+#include "Components/SceneComponent.h"
+#include "GameFramework/PlayerState.h"
 
 // Sets default values
 AFlickTableBase::AFlickTableBase()
@@ -24,6 +27,73 @@ AFlickTableBase::AFlickTableBase()
 	FallJudge->SetupAttachment(SceneRoot);
 
 	FallJudge->OnPieceEnteredFallJudge.AddDynamic(this,	&AFlickTableBase::HandlePieceEnteredFallJudge);
+	
+	PieceSpawner = CreateDefaultSubobject<UTablePieceSpawnComponent>(TEXT("PieceSpawner"));
+	
+	Player1SpawnOrigin = CreateDefaultSubobject<USceneComponent>(TEXT("Player1SpawnOrigin"));
+	Player1SpawnOrigin->SetupAttachment(RootComponent);
+
+	Player2SpawnOrigin = CreateDefaultSubobject<USceneComponent>(TEXT("Player2SpawnOrigin"));
+	Player2SpawnOrigin->SetupAttachment(RootComponent);
+
+	Player3SpawnOrigin = CreateDefaultSubobject<USceneComponent>(TEXT("Player3SpawnOrigin"));
+	Player3SpawnOrigin->SetupAttachment(RootComponent);
+
+	Player4SpawnOrigin = CreateDefaultSubobject<USceneComponent>(TEXT("Player4SpawnOrigin"));
+	Player4SpawnOrigin->SetupAttachment(RootComponent);
+	
+	SpecialPieceSpawnOrigin = CreateDefaultSubobject<USceneComponent>(TEXT("SpecialPieceSpawnOrigin"));
+	SpecialPieceSpawnOrigin->SetupAttachment(RootComponent);
+}
+
+int32 AFlickTableBase::SpawnNormalPiecesForPlayers(const TArray<APlayerState*>& Players, int32 PiecesPerPlayer)
+{
+	if (!HasAuthority() || !IsValid(PieceSpawner) || PiecesPerPlayer <= 0)
+	{
+		return 0;
+	}
+
+	USceneComponent* SpawnOrigins[] =
+	{
+		Player1SpawnOrigin,
+		Player2SpawnOrigin,
+		Player3SpawnOrigin,
+		Player4SpawnOrigin
+	};
+
+	const int32 PlayerCount = FMath::Min(Players.Num(), 4);
+	int32 TotalSpawnedCount = 0;
+
+	for (int32 PlayerIndex = 0; PlayerIndex < PlayerCount; ++PlayerIndex)
+	{
+		APlayerState* PlayerState = Players[PlayerIndex];
+		USceneComponent* SpawnOrigin = SpawnOrigins[PlayerIndex];
+
+		if (!IsValid(PlayerState) || !IsValid(SpawnOrigin))
+		{
+			continue;
+		}
+
+		TotalSpawnedCount += PieceSpawner->SpawnNormalPieces(PlayerState, SpawnOrigin->GetComponentTransform(), PiecesPerPlayer);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Spawned %d normal table pieces for %d players"), TotalSpawnedCount, PlayerCount);
+
+	return TotalSpawnedCount;
+}
+
+int32 AFlickTableBase::SpawnSpecialPieces(int32 PieceCount)
+{
+	if (!HasAuthority() || !IsValid(PieceSpawner) || !IsValid(SpecialPieceSpawnOrigin) || PieceCount <= 0)
+	{
+		return 0;
+	}
+
+	const int32 SpawnedCount = PieceSpawner->SpawnSpecialPieces(SpecialPieceSpawnOrigin->GetComponentTransform(), PieceCount);
+
+	UE_LOG(LogTemp, Log, TEXT("Spawned %d special table pieces"), SpawnedCount);
+
+	return SpawnedCount;
 }
 
 void AFlickTableBase::Tick(float DeltaSeconds)
@@ -67,6 +137,7 @@ void AFlickTableBase::Tick(float DeltaSeconds)
 	bMonitoringPieceMovement = false;
 	SettledElapsedTime = 0.0f;
 	SetActorTickEnabled(false);
+	ActiveFlickPlayerState = nullptr;
 
 	UE_LOG(LogTemp, Log, TEXT("All table pieces have settled"));
 
@@ -75,12 +146,21 @@ void AFlickTableBase::Tick(float DeltaSeconds)
 
 void AFlickTableBase::HandlePieceEnteredFallJudge(ATableBulletPiece* FallenPiece)
 {
-	if (!IsValid(FallenPiece) || !RegisteredPieces.Contains(FallenPiece))
+	if (!HasAuthority() || !IsValid(FallenPiece) || !RegisteredPieces.Contains(FallenPiece))
 	{
 		return;
 	}
 
-	UE_LOG(LogTemp,	Log, TEXT("Table piece fell: %s"), *FallenPiece->GetName());
+	UE_LOG(LogTemp, Log, TEXT("Table piece fell: %s"), *FallenPiece->GetName());
+
+	if (FallenPiece->GetPieceType() == ETablePieceType::Special && IsValid(ActiveFlickPlayerState))
+	{
+		const EWeaponType RewardWeaponType = FallenPiece->GetRewardWeaponType();
+
+		OnSpecialPieceCaptured.Broadcast(ActiveFlickPlayerState, RewardWeaponType);
+
+		UE_LOG(LogTemp, Log, TEXT("Special table piece captured by %s, weapon type: %d"), *ActiveFlickPlayerState->GetPlayerName(), static_cast<int32>(RewardWeaponType));
+	}
 	
 	FallenPiece->MarkAsOut();			// 판정 나면 TableBulletPiece의 MarkAsOut으로 아웃 처리
 	UnregisterPiece(FallenPiece);		// 등록된 총알에서 제거
@@ -115,6 +195,7 @@ bool AFlickTableBase::TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirec
 
 	if (bFlickApplied)
 	{
+		ActiveFlickPlayerState = Piece->GetOwningPlayerState();
 		SettledElapsedTime = 0.0f;
 		bMonitoringPieceMovement = true;
 		SetActorTickEnabled(true);
