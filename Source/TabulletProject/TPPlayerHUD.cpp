@@ -134,7 +134,7 @@ FText ATPPlayerHUD::GetMatchStatusText() const
 	{
 	case ETabulletMatchPhase::WaitingForPlayers:
 		return NSLOCTEXT("TPPlayerHUD", "MatchStatusWaitingForPlayers", "Waiting for players");
-	case ETabulletMatchPhase::ReadyCheck:
+	case ETabulletMatchPhase::Starting:
 		return NSLOCTEXT("TPPlayerHUD", "MatchStatusStarting", "Starting");
 	case ETabulletMatchPhase::InGame:
 		return bShowGameStartMessage

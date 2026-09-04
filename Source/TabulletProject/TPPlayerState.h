@@ -15,10 +15,6 @@ class TABULLETPROJECT_API ATPPlayerState : public APlayerState
 	GENERATED_BODY()
 	
 public:
-	
-	UPROPERTY(ReplicatedUsing = OnRep_IsReady, BlueprintReadOnly, Category = "Ready")
-	bool bIsReady = false;
-
 	UPROPERTY(ReplicatedUsing = OnRep_PlayerIndex, BlueprintReadOnly, Category = "Player")
 	int32 PlayerIndex = INDEX_NONE;
 
@@ -28,13 +24,9 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_IsEliminated, BlueprintReadOnly, Category = "Match")
 	bool bIsEliminated = false;
 	
-	void SetReady(bool bReady);
 	void SetPlayerIndex(int32 NewPlayerIndex);
 	void SetRemainingPieceCount(int32 NewRemainingPieceCount);
 	void SetEliminated(bool bNewIsEliminated);
-
-	UFUNCTION()
-	void OnRep_IsReady();
 
 	UFUNCTION()
 	void OnRep_PlayerIndex();
@@ -44,9 +36,6 @@ public:
 
 	UFUNCTION()
 	void OnRep_IsEliminated();
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "Ready")
-	void OnReadyChanged(bool bReady);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player")
 	void OnPlayerIndexChanged(int32 NewPlayerIndex);
