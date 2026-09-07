@@ -52,6 +52,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Spawn")
 	int32 SpawnSpecialPieces(int32 PieceCount);
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Round")
+	int32 ResetTablePieces();
 	
 	UPROPERTY(BlueprintAssignable, Category = "Table | Reward")
 	FOnSpecialPieceCaptured OnSpecialPieceCaptured;
