@@ -7,15 +7,30 @@
 #include "TabulletProject/Table/Actors/FlickTableBase.h"
 #include "TabulletProject/Table/Actors/TableBulletPiece.h"
 
+namespace
+{
+	FVector CalculateMultiRowSpawnLocation(const FTransform& SpawnOrigin, int32 PieceIndex, int32 PieceCount, int32 MaxPiecesPerRow, float SideSpacing, float ForwardSpacing, float HeightOffset)
+	{
+		const int32 SafeMaxPiecesPerRow = FMath::Max(MaxPiecesPerRow, 1);
+		const int32 RowIndex = PieceIndex / SafeMaxPiecesPerRow;
+		const int32 IndexInRow = PieceIndex % SafeMaxPiecesPerRow;
+		const int32 RemainingPieceCount = PieceCount - RowIndex * SafeMaxPiecesPerRow;
+		const int32 PiecesInRow = FMath::Min(RemainingPieceCount, SafeMaxPiecesPerRow);
+		const float CenterOffset = static_cast<float>(PiecesInRow - 1) * 0.5f;
 
-// Sets default values for this component's properties
+		const FVector ForwardDirection = SpawnOrigin.GetUnitAxis(EAxis::X);
+		const FVector SideDirection = SpawnOrigin.GetUnitAxis(EAxis::Y);
+		const FVector UpDirection = SpawnOrigin.GetUnitAxis(EAxis::Z);
+		const float SideOffset = (static_cast<float>(IndexInRow) - CenterOffset) * SideSpacing;
+		const float ForwardOffset = static_cast<float>(RowIndex) * ForwardSpacing;
+
+		return SpawnOrigin.GetLocation() + ForwardDirection * ForwardOffset + SideDirection * SideOffset + UpDirection * HeightOffset;
+	}
+}
+
 UTablePieceSpawnComponent::UTablePieceSpawnComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = false;
-
-	// ...
 }
 
 int32 UTablePieceSpawnComponent::SpawnNormalPieces(APlayerState* OwningPlayer, const FTransform& SpawnOrigin, int32 PieceCount)
@@ -29,15 +44,11 @@ int32 UTablePieceSpawnComponent::SpawnNormalPieces(APlayerState* OwningPlayer, c
 	}
 
 	int32 SpawnedCount = 0;
-	const FVector OriginLocation = SpawnOrigin.GetLocation();
-	const FVector SideDirection = SpawnOrigin.GetUnitAxis(EAxis::Y);
-	const FVector UpDirection = SpawnOrigin.GetUnitAxis(EAxis::Z);
-	const float CenterOffset = static_cast<float>(PieceCount - 1) * 0.5f;
 
 	for (int32 Index = 0; Index < PieceCount; ++Index)
 	{
-		const float SideOffset = (static_cast<float>(Index) - CenterOffset) * PieceSpacing;
-		const FVector SpawnLocation = OriginLocation + SideDirection * SideOffset + UpDirection * SpawnHeightOffset;
+		// 각 줄을 가운데 정렬하고 다음 줄은 바둑판 중앙 방향으로 배치한다.
+		const FVector SpawnLocation = CalculateMultiRowSpawnLocation(SpawnOrigin, Index, PieceCount, MaxPiecesPerRow, PieceSpacing, RowSpacing, SpawnHeightOffset);
 		const FTransform PieceTransform(SpawnOrigin.GetRotation(), SpawnLocation);
 
 		FActorSpawnParameters SpawnParameters;
@@ -91,17 +102,12 @@ int32 UTablePieceSpawnComponent::SpawnSpecialPieces(const FTransform& SpawnOrigi
 	}
 
 	int32 SpawnedCount = 0;
-	const FVector OriginLocation = SpawnOrigin.GetLocation();
-	const FVector SideDirection = SpawnOrigin.GetUnitAxis(EAxis::Y);
-	const FVector UpDirection = SpawnOrigin.GetUnitAxis(EAxis::Z);
-	const float CenterOffset = static_cast<float>(PieceCount - 1) * 0.5f;
 
 	for (int32 Index = 0; Index < PieceCount; ++Index)
 	{
 		const int32 RandomClassIndex = FMath::RandRange(0, ValidSpecialPieceClasses.Num() - 1);
 		const TSubclassOf<ATableBulletPiece> SelectedClass = ValidSpecialPieceClasses[RandomClassIndex];
-		const float SideOffset = (static_cast<float>(Index) - CenterOffset) * SpecialPieceSpacing;
-		const FVector SpawnLocation = OriginLocation + SideDirection * SideOffset + UpDirection * SpawnHeightOffset;
+		const FVector SpawnLocation = CalculateMultiRowSpawnLocation(SpawnOrigin, Index, PieceCount, MaxSpecialPiecesPerRow, SpecialPieceSpacing, SpecialRowSpacing, SpawnHeightOffset);
 		const FTransform PieceTransform(SpawnOrigin.GetRotation(), SpawnLocation);
 
 		FActorSpawnParameters SpawnParameters;

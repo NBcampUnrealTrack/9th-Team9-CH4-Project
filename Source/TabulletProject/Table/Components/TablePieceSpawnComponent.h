@@ -33,6 +33,18 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Spawn", meta = (ClampMin = "1.0"))		// 총알 사이 간격
 	float PieceSpacing = 10.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Spawn", meta = (ClampMin = "1"))
+	int32 MaxPiecesPerRow = 4;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Spawn", meta = (ClampMin = "1.0"))
+	float RowSpacing = 15.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Spawn", meta = (ClampMin = "1"))
+	int32 MaxSpecialPiecesPerRow = 3;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Spawn", meta = (ClampMin = "1.0"))
+	float SpecialRowSpacing = 20.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Spawn", meta = (ClampMin = "0.0"))		// 바둑판 위로 얼마나 위인지
 	float SpawnHeightOffset = 5.0f;
 	
