@@ -7,15 +7,30 @@
 #include "TabulletProject/Table/Actors/FlickTableBase.h"
 #include "TabulletProject/Table/Actors/TableBulletPiece.h"
 
+namespace
+{
+	FVector CalculateMultiRowSpawnLocation(const FTransform& SpawnOrigin, int32 PieceIndex, int32 PieceCount, int32 MaxPiecesPerRow, float SideSpacing, float ForwardSpacing, float HeightOffset)
+	{
+		const int32 SafeMaxPiecesPerRow = FMath::Max(MaxPiecesPerRow, 1);
+		const int32 RowIndex = PieceIndex / SafeMaxPiecesPerRow;
+		const int32 IndexInRow = PieceIndex % SafeMaxPiecesPerRow;
+		const int32 RemainingPieceCount = PieceCount - RowIndex * SafeMaxPiecesPerRow;
+		const int32 PiecesInRow = FMath::Min(RemainingPieceCount, SafeMaxPiecesPerRow);
+		const float CenterOffset = static_cast<float>(PiecesInRow - 1) * 0.5f;
 
-// Sets default values for this component's properties
+		const FVector ForwardDirection = SpawnOrigin.GetUnitAxis(EAxis::X);
+		const FVector SideDirection = SpawnOrigin.GetUnitAxis(EAxis::Y);
+		const FVector UpDirection = SpawnOrigin.GetUnitAxis(EAxis::Z);
+		const float SideOffset = (static_cast<float>(IndexInRow) - CenterOffset) * SideSpacing;
+		const float ForwardOffset = static_cast<float>(RowIndex) * ForwardSpacing;
+
+		return SpawnOrigin.GetLocation() + ForwardDirection * ForwardOffset + SideDirection * SideOffset + UpDirection * HeightOffset;
+	}
+}
+
 UTablePieceSpawnComponent::UTablePieceSpawnComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = false;
-
-	// ...
 }
 
 int32 UTablePieceSpawnComponent::SpawnNormalPieces(APlayerState* OwningPlayer, const FTransform& SpawnOrigin, int32 PieceCount)
