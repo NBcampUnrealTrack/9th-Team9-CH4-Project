@@ -15,6 +15,7 @@ class UTablePieceSpawnComponent;
 class USceneComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTablePiecesSettled);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTablePieceFell, ATableBulletPiece*, FallenPiece, APlayerState*, PieceOwner);
 UCLASS()
 class TABULLETPROJECT_API AFlickTableBase : public AActor
 {
@@ -26,6 +27,9 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category = "Table | Movement")
 	FOnTablePiecesSettled OnTablePiecesSettled;
+
+	UPROPERTY(BlueprintAssignable, Category = "Table | Fall")
+	FOnTablePieceFell OnTablePieceFell;
 	
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSpecialPieceCaptured, APlayerState*, CapturingPlayer, EWeaponType, WeaponType);
 	

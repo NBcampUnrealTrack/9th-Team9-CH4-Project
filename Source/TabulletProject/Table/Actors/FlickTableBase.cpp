@@ -183,6 +183,9 @@ void AFlickTableBase::HandlePieceEnteredFallJudge(ATableBulletPiece* FallenPiece
 
 	UE_LOG(LogTemp, Log, TEXT("Table piece fell: %s"), *FallenPiece->GetName());
 
+	// 게임 모드용 낙하 이벤트
+	OnTablePieceFell.Broadcast(FallenPiece, FallenPiece->GetOwningPlayerState());
+
 	if (FallenPiece->GetPieceType() == ETablePieceType::Special && IsValid(ActiveFlickPlayerState))
 	{
 		const EWeaponType RewardWeaponType = FallenPiece->GetRewardWeaponType();
