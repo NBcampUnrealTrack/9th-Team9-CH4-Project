@@ -9,6 +9,8 @@
 #include "TPPlayerController.h"
 #include "TPPlayerState.h"
 #include "EngineUtils.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerStart.h"
 #include "TabulletProject/Table/Actors/FlickTableBase.h"
 #include "TabulletProject/Table/Actors/TableBulletPiece.h"
 
@@ -131,7 +133,80 @@ void ATPGameMode::HandleMatchHasStarted()
 	}
 
 	InitializeTurnOrder();
+	SpawnTablePieces();
 	StartFirstTurn();
+}
+
+AActor* ATPGameMode::ChoosePlayerStart_Implementation(AController* Player)
+{
+	const ATPGameState* TPGameState = GetGameState<ATPGameState>();
+	const APlayerState* JoiningPlayerState = Player ? Player->PlayerState : nullptr;
+	const int32 PlayerIndex = TPGameState && JoiningPlayerState
+		? TPGameState->PlayerArray.IndexOfByKey(JoiningPlayerState)
+		: INDEX_NONE;
+
+	if (PlayerIndex != INDEX_NONE)
+	{
+		const FName DesiredStartTag(*FString::Printf(TEXT("P%d"), PlayerIndex));
+		if (AActor* TaggedPlayerStart = FindPlayerStartByTag(DesiredStartTag, true))
+		{
+			return TaggedPlayerStart;
+		}
+	}
+
+	for (int32 StartIndex = 0; StartIndex < RequiredPlayerCount; ++StartIndex)
+	{
+		const FName FallbackStartTag(*FString::Printf(TEXT("P%d"), StartIndex));
+		if (AActor* TaggedPlayerStart = FindPlayerStartByTag(FallbackStartTag, true))
+		{
+			return TaggedPlayerStart;
+		}
+	}
+
+	return Super::ChoosePlayerStart_Implementation(Player);
+}
+
+bool ATPGameMode::IsPlayerStartOccupied(const AActor* PlayerStart) const
+{
+	if (!PlayerStart || !GetWorld())
+	{
+		return false;
+	}
+
+	const FVector StartLocation = PlayerStart->GetActorLocation();
+	constexpr float OccupiedDistanceSquared = 10000.0f;
+
+	for (TActorIterator<APawn> It(GetWorld()); It; ++It)
+	{
+		const APawn* Pawn = *It;
+		if (Pawn && FVector::DistSquared(Pawn->GetActorLocation(), StartLocation) <= OccupiedDistanceSquared)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+AActor* ATPGameMode::FindPlayerStartByTag(FName StartTag, bool bRequireUnoccupied) const
+{
+	if (!GetWorld())
+	{
+		return nullptr;
+	}
+
+	for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+	{
+		APlayerStart* PlayerStart = *It;
+		if (PlayerStart
+			&& (PlayerStart->PlayerStartTag == StartTag || PlayerStart->ActorHasTag(StartTag))
+			&& (!bRequireUnoccupied || !IsPlayerStartOccupied(PlayerStart)))
+		{
+			return PlayerStart;
+		}
+	}
+
+	return nullptr;
 }
 
 bool ATPGameMode::CanStartGame() const
@@ -347,6 +422,59 @@ void ATPGameMode::InitializeTurnOrder()
 	}
 
 	RecalculatePlayerPieceCounts();
+}
+
+void ATPGameMode::SpawnTablePieces()
+{
+	if (!HasAuthority() || bTablePiecesSpawned)
+	{
+		return;
+	}
+
+	AFlickTableBase* FlickTable = FindFlickTable();
+	if (!IsValid(FlickTable))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Failed to spawn table pieces: FlickTable not found."));
+		return;
+	}
+
+	TArray<APlayerState*> Players;
+	Players.Reserve(TurnOrder.Num());
+
+	for (APlayerState* PlayerState : TurnOrder)
+	{
+		if (IsValid(PlayerState))
+		{
+			Players.Add(PlayerState);
+		}
+	}
+
+	const int32 SpawnedNormalPieces = FlickTable->SpawnNormalPiecesForPlayers(Players, PiecesPerPlayer);
+	const int32 SpawnedSpecialPieces = FlickTable->SpawnSpecialPieces(SpecialPieceCount);
+
+	bTablePiecesSpawned = SpawnedNormalPieces > 0 || SpawnedSpecialPieces > 0;
+
+	UE_LOG(LogTemp, Log, TEXT("Spawned table pieces. Normal=%d Special=%d"), SpawnedNormalPieces, SpawnedSpecialPieces);
+
+	RecalculatePlayerPieceCounts();
+}
+
+AFlickTableBase* ATPGameMode::FindFlickTable() const
+{
+	if (!GetWorld())
+	{
+		return nullptr;
+	}
+
+	for (TActorIterator<AFlickTableBase> It(GetWorld()); It; ++It)
+	{
+		if (AFlickTableBase* FlickTable = *It; IsValid(FlickTable))
+		{
+			return FlickTable;
+		}
+	}
+
+	return nullptr;
 }
 
 void ATPGameMode::StartFirstTurn()
