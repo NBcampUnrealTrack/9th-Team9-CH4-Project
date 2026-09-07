@@ -102,17 +102,12 @@ int32 UTablePieceSpawnComponent::SpawnSpecialPieces(const FTransform& SpawnOrigi
 	}
 
 	int32 SpawnedCount = 0;
-	const FVector OriginLocation = SpawnOrigin.GetLocation();
-	const FVector SideDirection = SpawnOrigin.GetUnitAxis(EAxis::Y);
-	const FVector UpDirection = SpawnOrigin.GetUnitAxis(EAxis::Z);
-	const float CenterOffset = static_cast<float>(PieceCount - 1) * 0.5f;
 
 	for (int32 Index = 0; Index < PieceCount; ++Index)
 	{
 		const int32 RandomClassIndex = FMath::RandRange(0, ValidSpecialPieceClasses.Num() - 1);
 		const TSubclassOf<ATableBulletPiece> SelectedClass = ValidSpecialPieceClasses[RandomClassIndex];
-		const float SideOffset = (static_cast<float>(Index) - CenterOffset) * SpecialPieceSpacing;
-		const FVector SpawnLocation = OriginLocation + SideDirection * SideOffset + UpDirection * SpawnHeightOffset;
+		const FVector SpawnLocation = CalculateMultiRowSpawnLocation(SpawnOrigin, Index, PieceCount, MaxSpecialPiecesPerRow, SpecialPieceSpacing, SpecialRowSpacing, SpawnHeightOffset);
 		const FTransform PieceTransform(SpawnOrigin.GetRotation(), SpawnLocation);
 
 		FActorSpawnParameters SpawnParameters;
