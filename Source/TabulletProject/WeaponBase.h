@@ -7,6 +7,8 @@
 #include "WeaponType.h"
 #include "WeaponBase.generated.h"
 
+class UWeaponVFXComponent;
+
 UCLASS()
 class TABULLETPROJECT_API AWeaponBase : public AActor
 {
@@ -23,6 +25,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	UDataTable* WeaponDataTable;
+	
+	UPROPERTY(VisibleAnywhere, Category = "VFX")
+	UWeaponVFXComponent* VFXComponent;
 
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	int32 Damage;
