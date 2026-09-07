@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "FlickTableBase.h"
@@ -94,6 +94,36 @@ int32 AFlickTableBase::SpawnSpecialPieces(int32 PieceCount)
 	UE_LOG(LogTemp, Log, TEXT("Spawned %d special table pieces"), SpawnedCount);
 
 	return SpawnedCount;
+}
+
+int32 AFlickTableBase::ResetTablePieces()
+{
+	if (!HasAuthority())
+	{
+		return 0;
+	}
+
+	int32 RemovedPieceCount = 0;
+
+	// 라운드에 등록된 총알만 제거.
+	for (ATableBulletPiece* Piece : RegisteredPieces)
+	{
+		if (IsValid(Piece))
+		{
+			Piece->Destroy();
+			++RemovedPieceCount;
+		}
+	}
+
+	RegisteredPieces.Empty();
+	ActiveFlickPlayerState = nullptr;
+	SettledElapsedTime = 0.0f;
+	bMonitoringPieceMovement = false;
+	SetActorTickEnabled(false);
+
+	UE_LOG(LogTemp, Log, TEXT("Reset table pieces: removed %d pieces"), RemovedPieceCount);
+
+	return RemovedPieceCount;
 }
 
 void AFlickTableBase::Tick(float DeltaSeconds)
