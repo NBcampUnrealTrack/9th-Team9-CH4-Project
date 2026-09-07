@@ -3,7 +3,7 @@
 #include "WeaponVFXComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
-#include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 
 UWeaponVFXComponent::UWeaponVFXComponent()
 {
@@ -18,10 +18,10 @@ void UWeaponVFXComponent::PlayFireEffects()
 		return;
 	}
 
-	USkeletalMeshComponent* WeaponMesh = Owner->FindComponentByClass<USkeletalMeshComponent>();
+	UStaticMeshComponent* WeaponMesh = Owner->FindComponentByClass<UStaticMeshComponent>();
 	if (!WeaponMesh)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[WeaponVFXComponent] SkeletalMeshComponent not found on %s"), *Owner->GetName());
+		UE_LOG(LogTemp, Warning, TEXT("[WeaponVFXComponent] StaticMeshComponent not found on %s"), *Owner->GetName());
 		return;
 	}
 
@@ -40,7 +40,7 @@ void UWeaponVFXComponent::PlayFireEffects()
 			FVector::ZeroVector,
 			FRotator::ZeroRotator,
 			EAttachLocation::SnapToTarget,
-			true // bAutoDestroy
+			true
 		);
 	}
 
