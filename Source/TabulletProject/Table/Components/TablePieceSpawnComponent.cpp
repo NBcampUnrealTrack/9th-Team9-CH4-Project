@@ -44,15 +44,11 @@ int32 UTablePieceSpawnComponent::SpawnNormalPieces(APlayerState* OwningPlayer, c
 	}
 
 	int32 SpawnedCount = 0;
-	const FVector OriginLocation = SpawnOrigin.GetLocation();
-	const FVector SideDirection = SpawnOrigin.GetUnitAxis(EAxis::Y);
-	const FVector UpDirection = SpawnOrigin.GetUnitAxis(EAxis::Z);
-	const float CenterOffset = static_cast<float>(PieceCount - 1) * 0.5f;
 
 	for (int32 Index = 0; Index < PieceCount; ++Index)
 	{
-		const float SideOffset = (static_cast<float>(Index) - CenterOffset) * PieceSpacing;
-		const FVector SpawnLocation = OriginLocation + SideDirection * SideOffset + UpDirection * SpawnHeightOffset;
+		// 각 줄을 가운데 정렬하고 다음 줄은 바둑판 중앙 방향으로 배치한다.
+		const FVector SpawnLocation = CalculateMultiRowSpawnLocation(SpawnOrigin, Index, PieceCount, MaxPiecesPerRow, PieceSpacing, RowSpacing, SpawnHeightOffset);
 		const FTransform PieceTransform(SpawnOrigin.GetRotation(), SpawnLocation);
 
 		FActorSpawnParameters SpawnParameters;
