@@ -6,6 +6,7 @@
 #include "TabulletProject/Component/AmmoComponent.h"
 #include "TabulletProject/Component/HealthComponent.h"
 #include "TabulletProject/Character/TPCharacter.h"
+#include "TabulletProject/Component/WeaponVFXComponent.h"
 #include "DrawDebugHelpers.h"
 
 AWeaponBase::AWeaponBase()
@@ -15,6 +16,8 @@ AWeaponBase::AWeaponBase()
 	
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
 	RootComponent = WeaponMesh;
+	
+	VFXComponent = CreateDefaultSubobject<UWeaponVFXComponent>(TEXT("VFXComponent"));
 }
 
 void AWeaponBase::BeginPlay()
@@ -125,5 +128,10 @@ void AWeaponBase::Multicast_FireEffect_Implementation(const TArray<FVector>& Sta
 	for (int32 i = 0; i < StartPoints.Num(); i++)
 	{
 		DrawDebugLine(GetWorld(), StartPoints[i], EndPoints[i], FColor::Red, false, 1.0f, 0, 1.0f);
+	}
+	
+	if (VFXComponent)          
+	{
+		VFXComponent->PlayFireEffects();
 	}
 }
