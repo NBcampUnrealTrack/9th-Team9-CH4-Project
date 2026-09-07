@@ -25,6 +25,7 @@ public:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
 	virtual void HandleMatchHasStarted() override;
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
 	bool CanStartGame() const;
 	void StartGame();
@@ -49,9 +50,13 @@ protected:
 	void BeginStartCountdown();
 	void CancelStartCountdown();
 	void InitializeTurnOrder();
+	void SpawnTablePieces();
+	AFlickTableBase* FindFlickTable() const;
 	void StartFirstTurn();
 	void SetCurrentTurnByIndex(int32 NewTurnIndex);
 	void CheckResolveComplete();
+	bool IsPlayerStartOccupied(const AActor* PlayerStart) const;
+	AActor* FindPlayerStartByTag(FName StartTag, bool bRequireUnoccupied) const;
 	bool AreAnyPiecesMoving() const;
 	bool UpdateEliminationsAndCheckGameOver();
 	void FinishGame(APlayerState* Winner);
@@ -61,6 +66,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Match", meta = (ClampMin = "0.0"))
 	float AutoStartDelay = 3.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Spawn", meta = (ClampMin = "0"))
+	int32 PiecesPerPlayer = 5;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Spawn", meta = (ClampMin = "0"))
+	int32 SpecialPieceCount = 2;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Turn", meta = (ClampMin = "0.01"))
 	float ResolveCheckInterval = 0.25f;
@@ -78,4 +89,5 @@ protected:
 	FTimerHandle StartMatchTimerHandle;
 	FTimerHandle ResolveCheckTimerHandle;
 	float ResolveStartedTime = 0.0f;
+	bool bTablePiecesSpawned = false;
 };
