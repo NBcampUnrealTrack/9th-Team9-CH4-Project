@@ -44,9 +44,16 @@ void UWeaponVFXComponent::PlayFireEffects()
 		);
 	}
 
-	if (FireSound)
+	AWeaponBase* Weapon = Cast<AWeaponBase>(Owner);
+	if (Weapon)
 	{
-		const FVector SocketLoc = WeaponMesh->GetSocketLocation(MuzzleSocketName);
-		UGameplayStatics::PlaySoundAtLocation(this, FireSound, SocketLoc);
+		if (USoundBase** FoundSound = FireSounds.Find(Weapon->WeaponType))
+		{
+			if (*FoundSound)
+			{
+				const FVector SocketLoc = WeaponMesh->GetSocketLocation(MuzzleSocketName);
+				UGameplayStatics::PlaySoundAtLocation(this, *FoundSound, SocketLoc);
+			}
+		}
 	}
 }

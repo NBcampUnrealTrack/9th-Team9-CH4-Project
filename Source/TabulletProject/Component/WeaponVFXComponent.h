@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "TabulletProject/WeaponBase.h"
 #include "WeaponVFXComponent.generated.h"
 
 class UNiagaraSystem;
@@ -25,8 +26,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "VFX")
 	UNiagaraSystem* MuzzleFlashFX;
 
-	UPROPERTY(EditDefaultsOnly, Category = "SFX")
-	USoundBase* FireSound;
+	UPROPERTY(EditAnywhere, Category = "VFX")
+	TMap<EWeaponType, USoundBase*> FireSounds;
 
 	UPROPERTY(EditDefaultsOnly, Category = "VFX")
 	FName MuzzleSocketName = "Muzzle";
