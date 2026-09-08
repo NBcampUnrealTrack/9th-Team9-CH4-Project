@@ -182,21 +182,25 @@ void AFlickTableBase::HandlePieceEnteredFallJudge(ATableBulletPiece* FallenPiece
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("Table piece fell: %s"), *FallenPiece->GetName());
+	const ETablePieceType FallenPieceType = FallenPiece->GetPieceType();
+	const EWeaponType RewardWeaponType = FallenPiece->GetRewardWeaponType();
+	APlayerState* FallenPieceOwner = FallenPiece->GetOwningPlayerState();
+	APlayerState* CapturingPlayer = ActiveFlickPlayerState;
 
-	// 게임 모드용 낙하 이벤트
-	OnTablePieceFell.Broadcast(FallenPiece, FallenPiece->GetOwningPlayerState());
+	FallenPiece->MarkAsOut();			// 낙하 판정 후 상태를 먼저 갱신
+	UnregisterPiece(FallenPiece);		// 등록 목록에서 먼저 제거해 중복 판정을 방지
 
-	if (FallenPiece->GetPieceType() == ETablePieceType::Special && IsValid(ActiveFlickPlayerState))
+	// 상태와 등록 목록을 갱신한 뒤 게임 모드에 낙하를 알림
+	OnTablePieceFell.Broadcast(FallenPiece, FallenPieceOwner);
+
+	if (FallenPieceType == ETablePieceType::Special && IsValid(CapturingPlayer))
 	{
-		const EWeaponType RewardWeaponType = FallenPiece->GetRewardWeaponType();
+		OnSpecialPieceCaptured.Broadcast(CapturingPlayer, RewardWeaponType);
 
-		OnSpecialPieceCaptured.Broadcast(ActiveFlickPlayerState, RewardWeaponType);
-
-		UE_LOG(LogTemp, Log, TEXT("Special table piece captured by %s, weapon type: %d"), *ActiveFlickPlayerState->GetPlayerName(), static_cast<int32>(RewardWeaponType));
+		UE_LOG(LogTemp, Log, TEXT("Special table piece captured by %s, weapon type: %d"), *CapturingPlayer->GetPlayerName(), static_cast<int32>(RewardWeaponType));
 	}
-	
-	FallenPiece->MarkAsOut();			// 판정 나면 TableBulletPiece의 MarkAsOut으로 아웃 처리
-	UnregisterPiece(FallenPiece);		// 등록된 총알에서 제거
+
+	FallenPiece->Destroy();
 }
 
 bool AFlickTableBase::TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower)
