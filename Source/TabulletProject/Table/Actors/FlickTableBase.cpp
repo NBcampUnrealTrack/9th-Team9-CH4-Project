@@ -210,6 +210,12 @@ bool AFlickTableBase::TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirec
 		return false;
 	}
 
+	if (WorldDirection.ContainsNaN() || !FMath::IsFinite(NormalizedPower) || NormalizedPower <= 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Rejected flick request: invalid direction or power"));
+		return false;
+	}
+
 	if (bMonitoringPieceMovement)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Rejected flick request: table is resolving physics"));
