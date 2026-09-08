@@ -206,6 +206,12 @@ bool AFlickTableBase::TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirec
 		return false;
 	}
 
+	if (bMonitoringPieceMovement)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Rejected flick request: table is resolving physics"));
+		return false;
+	}
+
 	if (!IsValid(Piece) || !RegisteredPieces.Contains(Piece))
 	{
 		return false;

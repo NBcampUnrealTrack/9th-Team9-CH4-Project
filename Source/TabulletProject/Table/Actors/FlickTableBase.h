@@ -35,6 +35,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Flick")
 	bool TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower);
+
+	UFUNCTION(BlueprintPure, Category = "Table | Flick")
+	bool IsResolvingFlick() const { return bMonitoringPieceMovement; }
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Piece Registry")
 	bool RegisterPiece(ATableBulletPiece* Piece);
