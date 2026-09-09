@@ -77,6 +77,27 @@ void UTableFlickInputComponent::BeginPlay()
 	EnhancedInputComponent->BindAction(FlickAction, ETriggerEvent::Completed, this, &UTableFlickInputComponent::HandleFlickCompleted);
 }
 
+void UTableFlickInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (IsValid(InputSubsystem) && IsValid(TableMappingContext))
+	{
+		InputSubsystem->RemoveMappingContext(TableMappingContext);
+	}
+
+	if (IsValid(PlayerController))
+	{
+		PlayerController->SetIgnoreLookInput(false);
+	}
+
+	SetComponentTickEnabled(false);
+	SelectedPiece = nullptr;
+	ActiveTable = nullptr;
+	bTableInputEnabled = false;
+	bDragging = false;
+
+	Super::EndPlay(EndPlayReason);
+}
+
 void UTableFlickInputComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
