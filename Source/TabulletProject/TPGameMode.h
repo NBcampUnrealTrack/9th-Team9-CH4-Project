@@ -83,10 +83,10 @@ protected:
 	float AutoStartDelay = 3.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Spawn", meta = (ClampMin = "0"))
-	int32 PiecesPerPlayer = 5;
+	int32 PiecesPerPlayer = 4;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Spawn", meta = (ClampMin = "0"))
-	int32 SpecialPieceCount = 2;
+	int32 SpecialPieceCount = 1;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Turn", meta = (ClampMin = "0.01"))
 	float ResolveCheckInterval = 0.25f;
