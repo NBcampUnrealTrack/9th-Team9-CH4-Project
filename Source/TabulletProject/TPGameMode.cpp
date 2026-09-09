@@ -622,7 +622,7 @@ void ATPGameMode::AwardAmmoForFallenPiece(ATableBulletPiece* FallenPiece, APlaye
 		? FallenPiece->GetRewardWeaponType()
 		: EWeaponType::Revolver;
 
-	AmmoComponent->AddAmmoCount(AmmoType, 1);
+	AmmoComponent->SetAmmoCount(AmmoType, AmmoComponent->GetAmmoCount(AmmoType) + 1);
 	UE_LOG(LogTemp, Log, TEXT("Awarded ammo. Player=%s Type=%d"), *CapturingPlayer->GetPlayerName(), static_cast<int32>(AmmoType));
 }
 
@@ -781,7 +781,11 @@ int32 ATPGameMode::GetTotalAmmoCount(APlayerState* PlayerState) const
 {
 	const ATPCharacter* Character = GetCharacterForPlayerState(PlayerState);
 	const UAmmoComponent* AmmoComponent = Character ? Character->FindComponentByClass<UAmmoComponent>() : nullptr;
-	return AmmoComponent ? AmmoComponent->GetTotalAmmoCount() : 0;
+	return AmmoComponent
+		? AmmoComponent->GetAmmoCount(EWeaponType::Revolver)
+			+ AmmoComponent->GetAmmoCount(EWeaponType::Shotgun)
+			+ AmmoComponent->GetAmmoCount(EWeaponType::Sniper)
+		: 0;
 }
 
 ATPCharacter* ATPGameMode::GetCharacterForPlayerState(APlayerState* PlayerState) const
