@@ -6,12 +6,15 @@
 
 class APlayerState;
 
+DECLARE_MULTICAST_DELEGATE(FOnReplicatedTurnStateChanged);
+
 UENUM(BlueprintType)
 enum class ETabulletMatchPhase : uint8
 {
 	WaitingForPlayers,
 	Starting,
 	InGame,
+	ShootingPhase,
 	GameOver
 };
 
@@ -20,7 +23,8 @@ enum class ETabulletTurnPhase : uint8
 {
 	None,
 	WaitingForAction,
-	ResolvingPhysics
+	ResolvingPhysics,
+	WaitingForShot
 };
 
 UCLASS()
@@ -48,6 +52,8 @@ public:
 
 	UPROPERTY(ReplicatedUsing = OnRep_WinnerPlayerState, BlueprintReadOnly, Category = "Match")
 	TObjectPtr<APlayerState> WinnerPlayerState;
+
+	FOnReplicatedTurnStateChanged OnReplicatedTurnStateChanged;
 
 	void SetMatchPhase(ETabulletMatchPhase NewPhase);
 	void SetCurrentTurnPlayerState(APlayerState* NewTurnPlayerState, int32 NewTurnNumber);
