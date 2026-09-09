@@ -47,8 +47,12 @@ protected:
 	void UpdateRotationSource();
 	void UpdateViewModeFromPhase();
 	
+	void TryBindGameState();
+
 	UPROPERTY()
 	TObjectPtr<ATPGameState> GameStateRef;
+
+	bool bBoundToGameState = false;
 	
 	UPROPERTY()
 	TObjectPtr<USpringArmComponent> SpringArm;

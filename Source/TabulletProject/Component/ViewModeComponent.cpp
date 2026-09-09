@@ -6,6 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/Controller.h"
 #include "../TPGameState.h"
+#include "../TPPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
 // Sets default values for this component's properties
@@ -42,20 +43,33 @@ void UViewModeComponent::BeginPlay()
 	SpringArm->TargetArmLength = ArmLength;
 	SpringArm->SetRelativeLocation(Offset);
 	UpdateRotationSource();
-	
-	if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+
+	TryBindGameState();
+}
+
+void UViewModeComponent::TryBindGameState()
+{
+	if (bBoundToGameState)
 	{
-		if (OwnerPawn->IsLocallyControlled())
-		{
-			GameStateRef = GetWorld()->GetGameState<ATPGameState>();
-			if (GameStateRef)
-			{
-				GameStateRef->OnReplicatedTurnStateChanged.AddUObject(
-					this, &UViewModeComponent::UpdateViewModeFromPhase);
-				UpdateViewModeFromPhase();
-			}
-		}
+		return;
 	}
+
+	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	if (!OwnerPawn || !OwnerPawn->IsLocallyControlled())
+	{
+		return;
+	}
+
+	GameStateRef = GetWorld()->GetGameState<ATPGameState>();
+	if (!GameStateRef)
+	{
+		return;
+	}
+
+	GameStateRef->OnReplicatedTurnStateChanged.AddUObject(
+		this, &UViewModeComponent::UpdateViewModeFromPhase);
+	bBoundToGameState = true;
+	UpdateViewModeFromPhase();
 }
 
 void UViewModeComponent::UpdateViewModeFromPhase()
@@ -89,25 +103,27 @@ void UViewModeComponent::SetViewMode(EViewMode NewMode)
 	
 	CurrentMode = NewMode;
 	Blending = true;
-	
+
 	if (CurrentMode == EViewMode::TopDown && HeadMovement)
 	{
 		HeadMovement->ResetStretch();
 	}
-	
-	if (CurrentMode == EViewMode::FirstPerson)
+
+	APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	AController* OwnerController = OwnerPawn ? OwnerPawn->GetController() : nullptr;
+
+	if (CurrentMode == EViewMode::FirstPerson && OwnerController)
 	{
 		// 탑뷰 동안 어긋난 몸 방향과 시선을 다시 맞춤
-		if (APawn* OwnerPawn = Cast<APawn>(GetOwner()))
-		{
-			if (AController* OwnerController = OwnerPawn->GetController())
-			{
-				FRotator SyncRot = OwnerPawn->GetActorRotation();
-				SyncRot.Pitch = 0.f;
-				SyncRot.Roll = 0.f;
-				OwnerController->SetControlRotation(SyncRot);
-			}
-		}
+		FRotator SyncRot = OwnerPawn->GetActorRotation();
+		SyncRot.Pitch = 0.f;
+		SyncRot.Roll = 0.f;
+		OwnerController->SetControlRotation(SyncRot);
+	}
+	
+	if (ATPPlayerController* TPPC = Cast<ATPPlayerController>(OwnerController))
+	{
+		TPPC->RefreshMouseInputMode();
 	}
 }
 
@@ -166,9 +182,10 @@ void UViewModeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 	{
 		return;
 	}
-	
+
+	TryBindGameState();
 	UpdateRotationSource();
-	
+
 	if (CurrentMode == EViewMode::TopDown)
 	{
 		FRotator CurrentRot = SpringArm->GetComponentRotation();
