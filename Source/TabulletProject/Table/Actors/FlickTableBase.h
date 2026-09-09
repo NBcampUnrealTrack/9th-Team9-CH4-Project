@@ -38,6 +38,12 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Table | Flick")
 	bool IsResolvingFlick() const { return bMonitoringPieceMovement; }
+
+	UFUNCTION(BlueprintPure, Category = "Table | Movement")
+	bool AreAllPiecesSettled() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Movement")
+	void ForceFinishFlickResolution();
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Piece Registry")
 	bool RegisterPiece(ATableBulletPiece* Piece);
