@@ -140,6 +140,8 @@ FText ATPPlayerHUD::GetMatchStatusText() const
 		return bShowGameStartMessage
 			? NSLOCTEXT("TPPlayerHUD", "MatchStatusGameStart", "Game Start")
 			: FText::GetEmpty();
+	case ETabulletMatchPhase::ShootingPhase:
+		return NSLOCTEXT("TPPlayerHUD", "MatchStatusShootingPhase", "Shooting Phase");
 	case ETabulletMatchPhase::GameOver:
 		return NSLOCTEXT("TPPlayerHUD", "MatchStatusGameOver", "Game Over");
 	default:
@@ -150,7 +152,7 @@ FText ATPPlayerHUD::GetMatchStatusText() const
 FText ATPPlayerHUD::GetTurnText() const
 {
 	const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
-	if (!TPGameState || TPGameState->MatchPhase != ETabulletMatchPhase::InGame)
+	if (!TPGameState || (TPGameState->MatchPhase != ETabulletMatchPhase::InGame && TPGameState->MatchPhase != ETabulletMatchPhase::ShootingPhase))
 	{
 		return FText::GetEmpty();
 	}
@@ -158,6 +160,11 @@ FText ATPPlayerHUD::GetTurnText() const
 	const ATPPlayerController* TPPlayerController = Cast<ATPPlayerController>(GetOwningPlayerController());
 	if (TPPlayerController && TPPlayerController->IsMyTurn())
 	{
+		if (TPGameState->MatchPhase == ETabulletMatchPhase::ShootingPhase)
+		{
+			return FText::Format(NSLOCTEXT("TPPlayerHUD", "YourShotFormat", "Shot {0} - Your Turn"), TPGameState->TurnNumber);
+		}
+
 		return FText::Format(NSLOCTEXT("TPPlayerHUD", "YourTurnFormat", "Turn {0} - Your Turn"), TPGameState->TurnNumber);
 	}
 
@@ -168,7 +175,9 @@ FText ATPPlayerHUD::GetTurnText() const
 	}
 
 	return FText::Format(
-		NSLOCTEXT("TPPlayerHUD", "OtherPlayerTurnFormat", "Turn {0} - Player {1} Turn"),
+		TPGameState->MatchPhase == ETabulletMatchPhase::ShootingPhase
+			? NSLOCTEXT("TPPlayerHUD", "OtherPlayerShotFormat", "Shot {0} - Player {1} Turn")
+			: NSLOCTEXT("TPPlayerHUD", "OtherPlayerTurnFormat", "Turn {0} - Player {1} Turn"),
 		TPGameState->TurnNumber,
 		CurrentTurnPlayerState->PlayerIndex + 1);
 }

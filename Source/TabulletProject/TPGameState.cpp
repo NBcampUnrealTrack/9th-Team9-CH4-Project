@@ -16,6 +16,7 @@ void ATPGameState::SetMatchPhase(ETabulletMatchPhase NewPhase)
 	{
 		MatchPhase = NewPhase;
 		OnMatchPhaseChanged(MatchPhase);
+		OnReplicatedTurnStateChanged.Broadcast();
 	}
 }
 
@@ -26,6 +27,7 @@ void ATPGameState::SetCurrentTurnPlayerState(APlayerState* NewTurnPlayerState, i
 		CurrentTurnPlayerState = NewTurnPlayerState;
 		TurnNumber = NewTurnNumber;
 		OnTurnChanged(CurrentTurnPlayerState, TurnNumber);
+		OnReplicatedTurnStateChanged.Broadcast();
 	}
 }
 
@@ -35,6 +37,7 @@ void ATPGameState::SetTurnPhase(ETabulletTurnPhase NewTurnPhase)
 	{
 		TurnPhase = NewTurnPhase;
 		OnTurnPhaseChanged(TurnPhase);
+		OnReplicatedTurnStateChanged.Broadcast();
 	}
 }
 
@@ -59,21 +62,25 @@ void ATPGameState::SetWinnerPlayerState(APlayerState* NewWinnerPlayerState)
 void ATPGameState::OnRep_MatchPhase()
 {
 	OnMatchPhaseChanged(MatchPhase);
+	OnReplicatedTurnStateChanged.Broadcast();
 }
 
 void ATPGameState::OnRep_CurrentTurnPlayerState()
 {
 	OnTurnChanged(CurrentTurnPlayerState, TurnNumber);
+	OnReplicatedTurnStateChanged.Broadcast();
 }
 
 void ATPGameState::OnRep_TurnNumber()
 {
 	OnTurnChanged(CurrentTurnPlayerState, TurnNumber);
+	OnReplicatedTurnStateChanged.Broadcast();
 }
 
 void ATPGameState::OnRep_TurnPhase()
 {
 	OnTurnPhaseChanged(TurnPhase);
+	OnReplicatedTurnStateChanged.Broadcast();
 }
 
 void ATPGameState::OnRep_TurnOrderPlayerStates()

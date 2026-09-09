@@ -8,6 +8,8 @@
 #include "TPPlayerHUD.h"
 #include "TPPlayerController.h"
 #include "TPPlayerState.h"
+#include "Component/AmmoComponent.h"
+#include "Component/HealthComponent.h"
 #include "EngineUtils.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerStart.h"
@@ -290,8 +292,11 @@ bool ATPGameMode::RequestFlick(AController* RequestingController, AFlickTableBas
 		return false;
 	}
 
+	LastFlickPlayerState = RequestingController->PlayerState;
+
 	if (!Table->TryApplyFlick(Piece, WorldDirection, NormalizedPower))
 	{
+		LastFlickPlayerState = nullptr;
 		return false;
 	}
 
@@ -438,6 +443,8 @@ void ATPGameMode::SpawnTablePieces()
 		return;
 	}
 
+	FlickTable->OnTablePieceFell.AddUniqueDynamic(this, &ATPGameMode::HandleTablePieceFell);
+
 	TArray<APlayerState*> Players;
 	Players.Reserve(TurnOrder.Num());
 
@@ -583,11 +590,219 @@ bool ATPGameMode::UpdateEliminationsAndCheckGameOver()
 
 	if (ActivePlayerCount <= 1)
 	{
-		FinishGame(LastActivePlayerState);
+		StartShootingPhase(LastActivePlayerState);
 		return true;
 	}
 
 	return false;
+}
+
+void ATPGameMode::HandleTablePieceFell(ATableBulletPiece* FallenPiece, APlayerState* PieceOwner)
+{
+	AwardAmmoForFallenPiece(FallenPiece, PieceOwner);
+}
+
+void ATPGameMode::AwardAmmoForFallenPiece(ATableBulletPiece* FallenPiece, APlayerState* PieceOwner)
+{
+	APlayerState* CapturingPlayer = LastFlickPlayerState;
+
+	if (!HasAuthority() || !IsValid(FallenPiece) || !IsValid(CapturingPlayer) || CapturingPlayer == PieceOwner)
+	{
+		return;
+	}
+
+	ATPCharacter* CapturingCharacter = GetCharacterForPlayerState(CapturingPlayer);
+	UAmmoComponent* AmmoComponent = CapturingCharacter ? CapturingCharacter->FindComponentByClass<UAmmoComponent>() : nullptr;
+	if (!AmmoComponent)
+	{
+		return;
+	}
+
+	const EWeaponType AmmoType = FallenPiece->GetPieceType() == ETablePieceType::Special
+		? FallenPiece->GetRewardWeaponType()
+		: EWeaponType::Revolver;
+
+	AmmoComponent->AddAmmoCount(AmmoType, 1);
+	UE_LOG(LogTemp, Log, TEXT("Awarded ammo. Player=%s Type=%d"), *CapturingPlayer->GetPlayerName(), static_cast<int32>(AmmoType));
+}
+
+void ATPGameMode::StartShootingPhase(APlayerState* TableWinner)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	TablePhaseWinner = TableWinner;
+	BuildShootingTurnOrder();
+
+	if (ATPGameState* TPGameState = GetGameState<ATPGameState>())
+	{
+		TPGameState->SetWinnerPlayerState(TableWinner);
+		TPGameState->SetMatchPhase(ETabulletMatchPhase::ShootingPhase);
+		TPGameState->SetTurnOrderPlayerStates(ShootingTurnOrder);
+	}
+
+	CurrentShootingTurnIndex = INDEX_NONE;
+	AdvanceShootingTurn();
+}
+
+void ATPGameMode::BuildShootingTurnOrder()
+{
+	ShootingTurnOrder.Reset();
+
+	const ATPGameState* TPGameState = GetGameState<ATPGameState>();
+	if (!TPGameState)
+	{
+		return;
+	}
+
+	for (APlayerState* PlayerState : TPGameState->PlayerArray)
+	{
+		if (IsValid(PlayerState) && IsPlayerAlive(PlayerState) && HasAnyAmmo(PlayerState))
+		{
+			ShootingTurnOrder.Add(PlayerState);
+		}
+	}
+
+	ShootingTurnOrder.Sort([this](const TObjectPtr<APlayerState>& Left, const TObjectPtr<APlayerState>& Right)
+	{
+		const int32 LeftAmmo = GetTotalAmmoCount(Left.Get());
+		const int32 RightAmmo = GetTotalAmmoCount(Right.Get());
+		if (LeftAmmo != RightAmmo)
+		{
+			return LeftAmmo > RightAmmo;
+		}
+
+		const ATPPlayerState* LeftTP = Cast<ATPPlayerState>(Left.Get());
+		const ATPPlayerState* RightTP = Cast<ATPPlayerState>(Right.Get());
+		const int32 LeftIndex = LeftTP ? LeftTP->PlayerIndex : MAX_int32;
+		const int32 RightIndex = RightTP ? RightTP->PlayerIndex : MAX_int32;
+		return LeftIndex < RightIndex;
+	});
+}
+
+void ATPGameMode::AdvanceShootingTurn()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (CheckShootingGameOver())
+	{
+		return;
+	}
+
+	for (int32 Attempt = 0; Attempt < ShootingTurnOrder.Num(); ++Attempt)
+	{
+		CurrentShootingTurnIndex = CurrentShootingTurnIndex == INDEX_NONE
+			? 0
+			: (CurrentShootingTurnIndex + 1) % ShootingTurnOrder.Num();
+
+		APlayerState* Candidate = ShootingTurnOrder[CurrentShootingTurnIndex];
+		if (IsValid(Candidate) && IsPlayerAlive(Candidate) && HasAnyAmmo(Candidate))
+		{
+			if (ATPGameState* TPGameState = GetGameState<ATPGameState>())
+			{
+				TPGameState->SetCurrentTurnPlayerState(Candidate, TPGameState->TurnNumber + 1);
+				TPGameState->SetTurnPhase(ETabulletTurnPhase::WaitingForShot);
+			}
+			return;
+		}
+	}
+
+	FinishGame(TablePhaseWinner);
+}
+
+void ATPGameMode::NotifyShotResolved(AController* ShootingController)
+{
+	ATPGameState* TPGameState = GetGameState<ATPGameState>();
+	if (!HasAuthority() || !TPGameState || TPGameState->MatchPhase != ETabulletMatchPhase::ShootingPhase)
+	{
+		return;
+	}
+
+	if (!IsCurrentTurnController(ShootingController))
+	{
+		return;
+	}
+
+	AdvanceShootingTurn();
+}
+
+bool ATPGameMode::CheckShootingGameOver()
+{
+	int32 AlivePlayerCount = 0;
+	APlayerState* LastAlivePlayerState = nullptr;
+
+	const ATPGameState* TPGameState = GetGameState<ATPGameState>();
+	if (!TPGameState)
+	{
+		return false;
+	}
+
+	for (APlayerState* PlayerState : TPGameState->PlayerArray)
+	{
+		if (ATPPlayerState* TPPlayerState = Cast<ATPPlayerState>(PlayerState))
+		{
+			TPPlayerState->SetEliminated(!IsPlayerAlive(PlayerState));
+		}
+
+		if (IsPlayerAlive(PlayerState))
+		{
+			AlivePlayerCount++;
+			LastAlivePlayerState = PlayerState;
+		}
+	}
+
+	if (AlivePlayerCount <= 1)
+	{
+		FinishGame(LastAlivePlayerState);
+		return true;
+	}
+
+	return false;
+}
+
+bool ATPGameMode::IsPlayerAlive(APlayerState* PlayerState) const
+{
+	const ATPCharacter* Character = GetCharacterForPlayerState(PlayerState);
+	const UHealthComponent* HealthComponent = Character ? Character->FindComponentByClass<UHealthComponent>() : nullptr;
+	return HealthComponent && !HealthComponent->IsDead();
+}
+
+bool ATPGameMode::HasAnyAmmo(APlayerState* PlayerState) const
+{
+	return GetTotalAmmoCount(PlayerState) > 0;
+}
+
+int32 ATPGameMode::GetTotalAmmoCount(APlayerState* PlayerState) const
+{
+	const ATPCharacter* Character = GetCharacterForPlayerState(PlayerState);
+	const UAmmoComponent* AmmoComponent = Character ? Character->FindComponentByClass<UAmmoComponent>() : nullptr;
+	return AmmoComponent ? AmmoComponent->GetTotalAmmoCount() : 0;
+}
+
+ATPCharacter* ATPGameMode::GetCharacterForPlayerState(APlayerState* PlayerState) const
+{
+	if (!IsValid(PlayerState) || !GetWorld())
+	{
+		return nullptr;
+	}
+
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		const APlayerController* PlayerController = It->Get();
+		if (!PlayerController || PlayerController->PlayerState != PlayerState)
+		{
+			continue;
+		}
+
+		return Cast<ATPCharacter>(PlayerController->GetPawn());
+	}
+
+	return nullptr;
 }
 
 void ATPGameMode::FinishGame(APlayerState* Winner)

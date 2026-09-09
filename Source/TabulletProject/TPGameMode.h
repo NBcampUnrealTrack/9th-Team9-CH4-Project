@@ -9,6 +9,8 @@
 class APlayerState;
 class AFlickTableBase;
 class ATableBulletPiece;
+class ATPCharacter;
+enum class EWeaponType : uint8;
 
 /**
  * 
@@ -30,6 +32,7 @@ public:
 	bool CanStartGame() const;
 	void StartGame();
 	bool RequestFlick(AController* RequestingController, AFlickTableBase* Table, ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower);
+	void NotifyShotResolved(AController* ShootingController);
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Turn")
 	void AdvanceTurn();
@@ -59,7 +62,19 @@ protected:
 	AActor* FindPlayerStartByTag(FName StartTag, bool bRequireUnoccupied) const;
 	bool AreAnyPiecesMoving() const;
 	bool UpdateEliminationsAndCheckGameOver();
+	void StartShootingPhase(APlayerState* TableWinner);
+	void BuildShootingTurnOrder();
+	void AdvanceShootingTurn();
+	bool CheckShootingGameOver();
+	bool IsPlayerAlive(APlayerState* PlayerState) const;
+	bool HasAnyAmmo(APlayerState* PlayerState) const;
+	int32 GetTotalAmmoCount(APlayerState* PlayerState) const;
+	ATPCharacter* GetCharacterForPlayerState(APlayerState* PlayerState) const;
+	void AwardAmmoForFallenPiece(ATableBulletPiece* FallenPiece, APlayerState* PieceOwner);
 	void FinishGame(APlayerState* Winner);
+
+	UFUNCTION()
+	void HandleTablePieceFell(ATableBulletPiece* FallenPiece, APlayerState* PieceOwner);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Match", meta = (ClampMin = "1"))
 	int32 RequiredPlayerCount = 4;
@@ -85,7 +100,17 @@ protected:
 	UPROPERTY()
 	TArray<TObjectPtr<APlayerState>> TurnOrder;
 
+	UPROPERTY()
+	TArray<TObjectPtr<APlayerState>> ShootingTurnOrder;
+
+	UPROPERTY()
+	TObjectPtr<APlayerState> TablePhaseWinner;
+
+	UPROPERTY()
+	TObjectPtr<APlayerState> LastFlickPlayerState;
+
 	int32 CurrentTurnIndex = INDEX_NONE;
+	int32 CurrentShootingTurnIndex = INDEX_NONE;
 	FTimerHandle StartMatchTimerHandle;
 	FTimerHandle ResolveCheckTimerHandle;
 	float ResolveStartedTime = 0.0f;
