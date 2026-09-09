@@ -5,6 +5,8 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/Controller.h"
+#include "../TPGameState.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values for this component's properties
 UViewModeComponent::UViewModeComponent()
@@ -40,6 +42,42 @@ void UViewModeComponent::BeginPlay()
 	SpringArm->TargetArmLength = ArmLength;
 	SpringArm->SetRelativeLocation(Offset);
 	UpdateRotationSource();
+	
+	if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+	{
+		if (OwnerPawn->IsLocallyControlled())
+		{
+			GameStateRef = GetWorld()->GetGameState<ATPGameState>();
+			if (GameStateRef)
+			{
+				GameStateRef->OnReplicatedTurnStateChanged.AddUObject(
+					this, &UViewModeComponent::UpdateViewModeFromPhase);
+				UpdateViewModeFromPhase();
+			}
+		}
+	}
+}
+
+void UViewModeComponent::UpdateViewModeFromPhase()
+{
+	if (!GameStateRef)
+	{
+		return;
+	}
+
+	switch (GameStateRef->MatchPhase)
+	{
+	case ETabulletMatchPhase::InGame:
+		SetViewMode(EViewMode::TopDown);
+		break;
+		
+	case ETabulletMatchPhase::ShootingPhase:
+		SetViewMode(EViewMode::FirstPerson);
+		break;
+		
+	default:
+		break;
+	}
 }
 
 void UViewModeComponent::SetViewMode(EViewMode NewMode)

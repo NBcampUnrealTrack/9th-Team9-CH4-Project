@@ -8,6 +8,7 @@
 
 class USpringArmComponent;
 class UHeadMovementComponent;
+class ATPGameState;
 
 UENUM(BlueprintType)
 enum class EViewMode : uint8
@@ -44,6 +45,10 @@ protected:
 	
 	void GetTargetValues(float& OutArmLength, FVector& OutOffset, float& OutPitch) const;
 	void UpdateRotationSource();
+	void UpdateViewModeFromPhase();
+	
+	UPROPERTY()
+	TObjectPtr<ATPGameState> GameStateRef;
 	
 	UPROPERTY()
 	TObjectPtr<USpringArmComponent> SpringArm;
