@@ -60,7 +60,6 @@ protected:
 	void CheckResolveComplete();
 	bool IsPlayerStartOccupied(const AActor* PlayerStart) const;
 	AActor* FindPlayerStartByTag(FName StartTag, bool bRequireUnoccupied) const;
-	bool AreAnyPiecesMoving() const;
 	bool UpdateEliminationsAndCheckGameOver();
 	void StartShootingPhase(APlayerState* TableWinner);
 	void BuildShootingTurnOrder();
@@ -90,9 +89,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Turn", meta = (ClampMin = "0.01"))
 	float ResolveCheckInterval = 0.25f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Turn", meta = (ClampMin = "0.0"))
-	float PieceStoppedSpeedThreshold = 3.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Turn", meta = (ClampMin = "0.1"))
 	float MaxResolveSeconds = 8.0f;
