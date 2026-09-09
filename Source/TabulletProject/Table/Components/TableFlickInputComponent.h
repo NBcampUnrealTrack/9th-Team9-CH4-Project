@@ -82,6 +82,4 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
 	float PreviewLineThickness = 1.0f;
 	
-	UFUNCTION(Server, Reliable)
-	void ServerRequestFlick(ATableBulletPiece* Piece, AFlickTableBase* Table, FVector WorldDirection, float NormalizedPower);
 };

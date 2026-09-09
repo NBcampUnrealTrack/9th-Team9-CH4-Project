@@ -15,6 +15,7 @@
 #include "Camera/PlayerCameraManager.h"
 #include "Math/RotationMatrix.h"
 #include "GameFramework/PlayerState.h"
+#include "TabulletProject/TPPlayerController.h"
 
 
 // Sets default values for this component's properties
@@ -243,7 +244,10 @@ void UTableFlickInputComponent::HandleFlickCompleted(const FInputActionValue& In
 
 	const FVector WorldDirection = CameraRight * FlickScreenDirection.X	- CameraUp * FlickScreenDirection.Y;
 
-	ServerRequestFlick(SelectedPiece, ActiveTable, WorldDirection, NormalizedPower);
+	if (ATPPlayerController* TPPlayerController = Cast<ATPPlayerController>(PlayerController))
+	{
+		TPPlayerController->ServerRequestFlick(ActiveTable, SelectedPiece, WorldDirection, NormalizedPower);
+	}
 	
 	bTableInputEnabled = false;
 	InputSubsystem->RemoveMappingContext(TableMappingContext);
@@ -318,21 +322,3 @@ void UTableFlickInputComponent::SetTableInputEnabled(bool bEnabled, AFlickTableB
 	}
 }
 
-void UTableFlickInputComponent::ServerRequestFlick_Implementation(ATableBulletPiece* Piece, AFlickTableBase* Table,
-	FVector WorldDirection, float NormalizedPower)
-{
-	if (!IsValid(Piece) || !IsValid(Table) || Piece->IsOut() || !IsValid(PlayerController))
-	{
-		return;
-	}
-
-	APlayerState* RequestingPlayerState = PlayerController->GetPlayerState<APlayerState>();
-
-	if (!Piece->IsOwnedByPlayerState(RequestingPlayerState))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Rejected flick request: player does not own piece %s"), *Piece->GetName());
-		return;
-	}
-
-	Table->TryApplyFlick(Piece, WorldDirection, NormalizedPower);
-}
