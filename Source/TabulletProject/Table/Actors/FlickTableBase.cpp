@@ -253,6 +253,26 @@ bool AFlickTableBase::TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirec
 	return bFlickApplied;
 }
 
+bool AFlickTableBase::AreAllPiecesSettled() const
+{
+	return !bMonitoringPieceMovement;
+}
+
+void AFlickTableBase::ForceFinishFlickResolution()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	bMonitoringPieceMovement = false;
+	SettledElapsedTime = 0.0f;
+	ActiveFlickPlayerState = nullptr;
+	SetActorTickEnabled(false);
+
+	UE_LOG(LogTemp, Warning, TEXT("Flick resolution timed out. Forcing table resolution to finish."));
+}
+
 bool AFlickTableBase::RegisterPiece(ATableBulletPiece* Piece)
 {
 	if (!HasAuthority() || !IsValid(Piece) || Piece->IsOut() || RegisteredPieces.Contains(Piece))
