@@ -512,13 +512,31 @@ void ATPGameMode::SetCurrentTurnByIndex(int32 NewTurnIndex)
 
 void ATPGameMode::CheckResolveComplete()
 {
+	ATPGameState* TPGameState = GetGameState<ATPGameState>();
+	if (!TPGameState || TPGameState->TurnPhase != ETabulletTurnPhase::ResolvingPhysics)
+	{
+		GetWorldTimerManager().ClearTimer(ResolveCheckTimerHandle);
+		return;
+	}
+
+	AFlickTableBase* FlickTable = FindFlickTable();
+	if (!IsValid(FlickTable))
+	{
+		return;
+	}
+
 	const bool bTimedOut = GetWorld() && GetWorld()->GetTimeSeconds() - ResolveStartedTime >= MaxResolveSeconds;
-	if (!bTimedOut && AreAnyPiecesMoving())
+	if (!bTimedOut && !FlickTable->AreAllPiecesSettled())
 	{
 		return;
 	}
 
 	GetWorldTimerManager().ClearTimer(ResolveCheckTimerHandle);
+
+	if (bTimedOut)
+	{
+		FlickTable->ForceFinishFlickResolution();
+	}
 
 	if (UpdateEliminationsAndCheckGameOver())
 	{
@@ -526,24 +544,6 @@ void ATPGameMode::CheckResolveComplete()
 	}
 
 	AdvanceTurn();
-}
-
-bool ATPGameMode::AreAnyPiecesMoving() const
-{
-	if (!GetWorld())
-	{
-		return false;
-	}
-
-	for (TActorIterator<ATableBulletPiece> It(GetWorld()); It; ++It)
-	{
-		if (const ATableBulletPiece* Piece = *It; Piece && Piece->IsMoving(PieceStoppedSpeedThreshold, PieceStoppedSpeedThreshold))
-		{
-			return true;
-		}
-	}
-
-	return false;
 }
 
 bool ATPGameMode::UpdateEliminationsAndCheckGameOver()
