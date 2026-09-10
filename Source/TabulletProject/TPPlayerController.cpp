@@ -6,6 +6,10 @@
 #include "EngineUtils.h"
 #include "GameFramework/Pawn.h"
 #include "TPPlayerState.h"
+#include "TabulletProject/Component/WeaponManagerComponent.h"
+#include "TabulletProject/Component/AmmoComponent.h"
+#include "WeaponBase.h"
+#include "Blueprint/UserWidget.h"
 #include "Table/Components/TableFlickInputComponent.h"
 #include "Table/Actors/FlickTableBase.h"
 
@@ -75,7 +79,43 @@ void ATPPlayerController::RefreshMouseInputMode()
 	
 	ResetIgnoreLookInput();
 	SetIgnoreLookInput(bShowTopDownCursor);
+	bShowMouseCursor = bShowTopDownCursor;
+	
+	if (bShowTopDownCursor)
+	{
+		HideCrosshair();
+	}
+	else
+	{
+		const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
+		const bool bIsMyShootingTurn = TPGameState && PlayerState
+			&& TPGameState->CurrentTurnPlayerState == PlayerState;
 
+		bool bHasAmmo = false;
+		if (const APawn* OwnedPawn = GetPawn())
+		{
+			const UWeaponManagerComponent* WeaponManager = OwnedPawn->FindComponentByClass<UWeaponManagerComponent>();
+			const UAmmoComponent* AmmoComp = OwnedPawn->FindComponentByClass<UAmmoComponent>();
+
+			if (WeaponManager && AmmoComp)
+			{
+				if (const AWeaponBase* CurrentWeapon = WeaponManager->GetCurrentWeapon())
+				{
+					bHasAmmo = AmmoComp->HasAmmo(CurrentWeapon->WeaponType);
+				}
+			}
+		}
+
+		if (bIsMyShootingTurn && bHasAmmo)
+		{
+			ShowCrosshair();
+		}
+		else
+		{
+			HideCrosshair();
+		}
+	}
+	
 	if (bShowTopDownCursor)
 	{
 		FInputModeGameAndUI InputMode;
@@ -161,4 +201,30 @@ bool ATPPlayerController::ShouldEnableTableInput() const
 	}
 	
 	return true;
+}
+
+void ATPPlayerController::ShowCrosshair()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	if (!CrosshairWidgetInstance && CrosshairWidgetClass)
+	{
+		CrosshairWidgetInstance = CreateWidget<UUserWidget>(this, CrosshairWidgetClass);
+	}
+
+	if (CrosshairWidgetInstance && !CrosshairWidgetInstance->IsInViewport())
+	{
+		CrosshairWidgetInstance->AddToViewport();
+	}
+}
+
+void ATPPlayerController::HideCrosshair()
+{
+	if (CrosshairWidgetInstance && CrosshairWidgetInstance->IsInViewport())
+	{
+		CrosshairWidgetInstance->RemoveFromParent();
+	}
 }
