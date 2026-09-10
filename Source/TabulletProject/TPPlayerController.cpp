@@ -4,6 +4,7 @@
 #include "TPGameState.h"
 #include "Component/ViewModeComponent.h"
 #include "EngineUtils.h"
+#include "TPPlayerState.h"
 #include "Table/Components/TableFlickInputComponent.h"
 #include "Table/Actors/FlickTableBase.h"
 
@@ -130,9 +131,8 @@ AFlickTableBase* ATPPlayerController::FindFlickTable()
 
 bool ATPPlayerController::IsTopDownViewMode() const
 {
-	const APawn* ControlledPawn = GetPawn();
-	const UViewModeComponent* ViewModeComponent = ControlledPawn ? ControlledPawn->FindComponentByClass<UViewModeComponent>() : nullptr;
-	return ViewModeComponent && !ViewModeComponent->IsFirstPerson();
+	const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
+	return TPGameState && TPGameState->MatchPhase == ETabulletMatchPhase::InGame;
 }
 
 bool ATPPlayerController::ShouldEnableTableInput() const

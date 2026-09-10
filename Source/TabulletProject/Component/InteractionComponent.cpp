@@ -62,8 +62,8 @@ bool UInteractionComponent::CanShoot() const
 		return false;
 	}
 	
-	// TODO: Shooting 페이즈 추가되면 실제 사격 가능 조건으로 교체
-	return TPGameState->MatchPhase == ETabulletMatchPhase::GameOver
-		&& TPGameState->WinnerPlayerState == MyPlayerState;
+	return TPGameState->MatchPhase == ETabulletMatchPhase::ShootingPhase
+		&& TPGameState->TurnPhase == ETabulletTurnPhase::WaitingForShot
+		&& TPGameState->CurrentTurnPlayerState == MyPlayerState;
 }
 
