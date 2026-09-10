@@ -21,6 +21,8 @@ public:
 	// Sets default values for this actor's properties
 	ATableBulletPiece();
 
+	virtual void BeginPlay() override;
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	void MarkAsOut();
@@ -63,8 +65,13 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_PieceState, VisibleInstanceOnly, BlueprintReadOnly, Category = "Table Piece")
 	ETablePieceState PieceState = ETablePieceState::OnTable;
 	
-	UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "Table Piece")
+	UPROPERTY(ReplicatedUsing = OnRep_OwningPlayerState, VisibleInstanceOnly, BlueprintReadOnly, Category = "Table Piece")
 	TObjectPtr<APlayerState> OwningPlayerState;
+
+	UFUNCTION()
+	void OnRep_OwningPlayerState();
+
+	void UpdateOwnershipHighlight();
 	
 	UFUNCTION()
 	void OnRep_PieceState();

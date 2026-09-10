@@ -4,6 +4,8 @@
 #include "TableBulletPiece.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/PlayerState.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerController.h"
 #include "Net/UnrealNetwork.h"
 
 // Sets default values
@@ -25,6 +27,14 @@ ATableBulletPiece::ATableBulletPiece()
 	PieceMesh->SetCollisionProfileName(TEXT("PhysicsActor"));		// 물리 충돌 설정
 	
 	PieceMesh->BodyInstance.bUseCCD = true;			// 빠르게 움직일 때 관통할 확률을 줄인다는데 모르겠음..
+	PieceMesh->SetCustomDepthStencilValue(240);
+}
+
+void ATableBulletPiece::BeginPlay()
+{
+	Super::BeginPlay();
+
+	UpdateOwnershipHighlight();
 }
 
 //  여기부터
@@ -47,6 +57,27 @@ void ATableBulletPiece::OnRep_PieceState()
 	{
 		ApplyOutState();
 	}
+}
+
+void ATableBulletPiece::OnRep_OwningPlayerState()
+{
+	UpdateOwnershipHighlight();
+}
+
+void ATableBulletPiece::UpdateOwnershipHighlight()
+{
+	if (!IsValid(PieceMesh))
+	{
+		return;
+	}
+
+	const APlayerController* LocalPlayerController = UGameplayStatics::GetPlayerController(this, 0);
+	const bool bIsOwnedByLocalPlayer =
+		IsValid(LocalPlayerController) &&
+		IsValid(LocalPlayerController->PlayerState) &&
+		OwningPlayerState == LocalPlayerController->PlayerState;
+
+	PieceMesh->SetRenderCustomDepth(bIsOwnedByLocalPlayer);
 }
 
 void ATableBulletPiece::ApplyOutState()
@@ -134,6 +165,7 @@ void ATableBulletPiece::SetOwningPlayerState(APlayerState* InOwningPlayerState)	
 	}
 
 	OwningPlayerState = InOwningPlayerState;
+	UpdateOwnershipHighlight();
 	ForceNetUpdate();
 }
 
