@@ -76,6 +76,7 @@ void ATPGameMode::Logout(AController* Exiting)
 	if (ATPPlayerState* TPPlayerState = Exiting ? Exiting->GetPlayerState<ATPPlayerState>() : nullptr)
 	{
 		TPPlayerState->SetEliminated(true);
+		TPPlayerState->SetTableEliminated(true);
 	}
 
 	Super::Logout(Exiting);
@@ -134,7 +135,7 @@ void ATPGameMode::HandleMatchHasStarted()
 		TPGameState->SetTurnPhase(ETabulletTurnPhase::None);
 	}
 
-	InitializeTurnOrder();
+	InitializeTurnOrder(true);
 	SpawnTablePieces();
 	StartFirstTurn();
 }
@@ -328,7 +329,7 @@ void ATPGameMode::AdvanceTurn()
 		CurrentTurnIndex = NextTurnIndex;
 
 		const ATPPlayerState* TPPlayerState = Cast<ATPPlayerState>(TurnOrder[CurrentTurnIndex]);
-		if (TPPlayerState && !TPPlayerState->bIsEliminated)
+		if (TPPlayerState && !TPPlayerState->bIsTableEliminated)
 		{
 			SetCurrentTurnByIndex(CurrentTurnIndex);
 			return;
@@ -401,7 +402,7 @@ void ATPGameMode::RecalculatePlayerPieceCounts()
 	}
 }
 
-void ATPGameMode::InitializeTurnOrder()
+void ATPGameMode::InitializeTurnOrder(bool bResetCombatEliminations)
 {
 	TurnOrder.Reset();
 	CurrentTurnIndex = INDEX_NONE;
@@ -416,7 +417,22 @@ void ATPGameMode::InitializeTurnOrder()
 	{
 		if (ATPPlayerState* TPPlayerState = Cast<ATPPlayerState>(PlayerState))
 		{
-			TPPlayerState->SetEliminated(false);
+			if (bResetCombatEliminations)
+			{
+				TPPlayerState->SetEliminated(false);
+			}
+			else
+			{
+				TPPlayerState->SetEliminated(!IsPlayerAlive(TPPlayerState));
+			}
+
+			if (!bResetCombatEliminations && TPPlayerState->bIsEliminated)
+			{
+				TPPlayerState->SetTableEliminated(true);
+				continue;
+			}
+
+			TPPlayerState->SetTableEliminated(false);
 			TurnOrder.Add(TPPlayerState);
 		}
 	}
@@ -494,6 +510,51 @@ void ATPGameMode::StartFirstTurn()
 	SetCurrentTurnByIndex(0);
 }
 
+void ATPGameMode::StartNextTableRound()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(ResolveCheckTimerHandle);
+	LastFlickPlayerState = nullptr;
+	TablePhaseWinner = nullptr;
+	ShootingTurnOrder.Reset();
+	CurrentShootingTurnIndex = INDEX_NONE;
+
+	if (CheckShootingGameOver())
+	{
+		return;
+	}
+
+	if (AFlickTableBase* FlickTable = FindFlickTable())
+	{
+		FlickTable->ResetTablePieces();
+	}
+
+	bTablePiecesSpawned = false;
+	InitializeTurnOrder(false);
+
+	if (TurnOrder.Num() <= 1)
+	{
+		FinishGame(TurnOrder.IsValidIndex(0) ? TurnOrder[0] : nullptr);
+		return;
+	}
+
+	if (ATPGameState* TPGameState = GetGameState<ATPGameState>())
+	{
+		TPGameState->SetWinnerPlayerState(nullptr);
+		TPGameState->SetCurrentTurnPlayerState(nullptr, TPGameState->TurnNumber);
+		TPGameState->SetTurnPhase(ETabulletTurnPhase::None);
+		TPGameState->SetMatchPhase(ETabulletMatchPhase::InGame);
+		TPGameState->SetTurnOrderPlayerStates(TurnOrder);
+	}
+
+	SpawnTablePieces();
+	StartFirstTurn();
+}
+
 void ATPGameMode::SetCurrentTurnByIndex(int32 NewTurnIndex)
 {
 	if (!HasAuthority() || !TurnOrder.IsValidIndex(NewTurnIndex))
@@ -565,13 +626,13 @@ bool ATPGameMode::UpdateEliminationsAndCheckGameOver()
 		if (TPPlayerState->RemainingPieceCount > 0)
 		{
 			bHasAnyOwnedPiece = true;
-			TPPlayerState->SetEliminated(false);
+			TPPlayerState->SetTableEliminated(false);
 			ActivePlayerCount++;
 			LastActivePlayerState = TPPlayerState;
 		}
 		else if (bHasAnyOwnedPiece)
 		{
-			TPPlayerState->SetEliminated(true);
+			TPPlayerState->SetTableEliminated(true);
 		}
 	}
 
@@ -584,7 +645,7 @@ bool ATPGameMode::UpdateEliminationsAndCheckGameOver()
 	{
 		if (ATPPlayerState* TPPlayerState = Cast<ATPPlayerState>(PlayerState))
 		{
-			TPPlayerState->SetEliminated(TPPlayerState->RemainingPieceCount <= 0);
+			TPPlayerState->SetTableEliminated(TPPlayerState->RemainingPieceCount <= 0);
 		}
 	}
 
@@ -611,6 +672,11 @@ void ATPGameMode::AwardAmmoForFallenPiece(ATableBulletPiece* FallenPiece, APlaye
 		return;
 	}
 
+	if (FallenPiece->GetPieceType() != ETablePieceType::Special)
+	{
+		return;
+	}
+
 	ATPCharacter* CapturingCharacter = GetCharacterForPlayerState(CapturingPlayer);
 	UAmmoComponent* AmmoComponent = CapturingCharacter ? CapturingCharacter->FindComponentByClass<UAmmoComponent>() : nullptr;
 	if (!AmmoComponent)
@@ -618,10 +684,7 @@ void ATPGameMode::AwardAmmoForFallenPiece(ATableBulletPiece* FallenPiece, APlaye
 		return;
 	}
 
-	const EWeaponType AmmoType = FallenPiece->GetPieceType() == ETablePieceType::Special
-		? FallenPiece->GetRewardWeaponType()
-		: EWeaponType::Revolver;
-
+	const EWeaponType AmmoType = FallenPiece->GetRewardWeaponType();
 	AmmoComponent->SetAmmoCount(AmmoType, AmmoComponent->GetAmmoCount(AmmoType) + 1);
 	UE_LOG(LogTemp, Log, TEXT("Awarded ammo. Player=%s Type=%d"), *CapturingPlayer->GetPlayerName(), static_cast<int32>(AmmoType));
 }
@@ -659,7 +722,7 @@ void ATPGameMode::BuildShootingTurnOrder()
 
 	for (APlayerState* PlayerState : TPGameState->PlayerArray)
 	{
-		if (IsValid(PlayerState) && IsPlayerAlive(PlayerState) && HasAnyAmmo(PlayerState))
+		if (IsValid(PlayerState) && PlayerState == TablePhaseWinner && IsPlayerAlive(PlayerState) && HasAnyAmmo(PlayerState))
 		{
 			ShootingTurnOrder.Add(PlayerState);
 		}
@@ -722,7 +785,7 @@ void ATPGameMode::AdvanceShootingTurn()
 		}
 	}
 
-	FinishGame(TablePhaseWinner);
+	StartNextTableRound();
 }
 
 void ATPGameMode::NotifyShotResolved(AController* ShootingController)
@@ -738,7 +801,12 @@ void ATPGameMode::NotifyShotResolved(AController* ShootingController)
 		return;
 	}
 
-	AdvanceShootingTurn();
+	if (CheckShootingGameOver())
+	{
+		return;
+	}
+
+	StartNextTableRound();
 }
 
 bool ATPGameMode::CheckShootingGameOver()

@@ -150,5 +150,11 @@ bool ATPPlayerController::ShouldEnableTableInput() const
 		return false;
 	}
 
+	const ATPPlayerState* TPPlayerState = GetPlayerState<ATPPlayerState>();
+	if (TPPlayerState && TPPlayerState->bIsTableEliminated)
+	{
+		return false;
+	}
+
 	return IsTopDownViewMode();
 }

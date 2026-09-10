@@ -52,9 +52,10 @@ public:
 protected:
 	void BeginStartCountdown();
 	void CancelStartCountdown();
-	void InitializeTurnOrder();
+	void InitializeTurnOrder(bool bResetCombatEliminations);
 	void SpawnTablePieces();
 	AFlickTableBase* FindFlickTable() const;
+	void StartNextTableRound();
 	void StartFirstTurn();
 	void SetCurrentTurnByIndex(int32 NewTurnIndex);
 	void CheckResolveComplete();
