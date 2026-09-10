@@ -2,9 +2,12 @@
 
 #include "WeaponManagerComponent.h"
 #include "TabulletProject/WeaponBase.h"
+#include "TabulletProject/TPGameMode.h"
+#include "TabulletProject/Component/AmmoComponent.h"
 #include "EnhancedInputComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/Pawn.h"
 
 UWeaponManagerComponent::UWeaponManagerComponent()
 {
@@ -98,9 +101,28 @@ void UWeaponManagerComponent::ApplyWeaponSwitch(EWeaponType NewType)
 
 void UWeaponManagerComponent::FireCurrentWeapon()
 {
-	if (CurrentWeapon)
+	ServerFireCurrentWeapon();
+}
+
+void UWeaponManagerComponent::ServerFireCurrentWeapon_Implementation()
+{
+	APawn* OwnerPawn = GetOwner<APawn>();
+	if (!OwnerPawn || !OwnerPawn->HasAuthority() || !CurrentWeapon)
 	{
-		CurrentWeapon->Fire();
+		return;
+	}
+
+	const UAmmoComponent* AmmoComponent = OwnerPawn->FindComponentByClass<UAmmoComponent>();
+	if (!AmmoComponent || !AmmoComponent->HasAmmo(CurrentWeaponType))
+	{
+		return;
+	}
+
+	CurrentWeapon->Fire();
+
+	if (ATPGameMode* TPGameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ATPGameMode>() : nullptr)
+	{
+		TPGameMode->NotifyShotResolved(OwnerPawn->GetController());
 	}
 }
 

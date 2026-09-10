@@ -667,6 +667,16 @@ void ATPGameMode::BuildShootingTurnOrder()
 
 	ShootingTurnOrder.Sort([this](const TObjectPtr<APlayerState>& Left, const TObjectPtr<APlayerState>& Right)
 	{
+		if (Left == TablePhaseWinner)
+		{
+			return true;
+		}
+
+		if (Right == TablePhaseWinner)
+		{
+			return false;
+		}
+
 		const int32 LeftAmmo = GetTotalAmmoCount(Left.Get());
 		const int32 RightAmmo = GetTotalAmmoCount(Right.Get());
 		if (LeftAmmo != RightAmmo)

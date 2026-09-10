@@ -28,6 +28,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void FireCurrentWeapon();
 
+	UFUNCTION(Server, Reliable)
+	void ServerFireCurrentWeapon();
+
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	AWeaponBase* GetCurrentWeapon() const { return CurrentWeapon; }
 

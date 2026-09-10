@@ -4,10 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/HUD.h"
+#include "WeaponType.h"
 #include "TPPlayerHUD.generated.h"
 
 class UUserWidget;
 class UTextBlock;
+class UProgressBar;
 
 /**
  * 
@@ -34,6 +36,8 @@ private:
 	FText GetPlayerCountText() const;
 	FText GetMatchStatusText() const;
 	FText GetTurnText() const;
+	FText GetAmmoText(EWeaponType WeaponType, const TCHAR* Label) const;
+	void RefreshHealthHUD();
 
 	UPROPERTY()
 	TObjectPtr<UUserWidget> GameHUDWidget;
@@ -46,6 +50,21 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UTextBlock> TurnText;
+
+	UPROPERTY()
+	TObjectPtr<UTextBlock> RevolverAmmoText;
+
+	UPROPERTY()
+	TObjectPtr<UTextBlock> ShotgunAmmoText;
+
+	UPROPERTY()
+	TObjectPtr<UTextBlock> SniperAmmoText;
+
+	UPROPERTY()
+	TObjectPtr<UProgressBar> HealthBar;
+
+	UPROPERTY()
+	TObjectPtr<UTextBlock> HealthText;
 
 	float RefreshElapsedTime = 0.0f;
 	float GameStartMessageElapsedTime = 0.0f;
