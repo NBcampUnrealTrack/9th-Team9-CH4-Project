@@ -29,7 +29,17 @@ bool UInteractionComponent::IsMyTurn() const
 	const ATPGameState* TPGameState = GetTPGameState();
 	const ATPPlayerState* MyPlayerState = GetOwnerPlayerState();
 	
-	if (!TPGameState || !MyPlayerState || MyPlayerState->bIsEliminated)
+	if (!TPGameState || !MyPlayerState)
+	{
+		return false;
+	}
+
+	if (TPGameState->MatchPhase == ETabulletMatchPhase::InGame && MyPlayerState->bIsTableEliminated)
+	{
+		return false;
+	}
+
+	if (TPGameState->MatchPhase == ETabulletMatchPhase::ShootingPhase && MyPlayerState->bIsEliminated)
 	{
 		return false;
 	}
@@ -42,7 +52,7 @@ bool UInteractionComponent::CanFlick() const
 	const ATPGameState* TPGameState = GetTPGameState();
 	const ATPPlayerState* MyPlayerState = GetOwnerPlayerState();
 	
-	if (!TPGameState || !MyPlayerState || MyPlayerState->bIsEliminated)
+	if (!TPGameState || !MyPlayerState || MyPlayerState->bIsTableEliminated)
 	{
 		return false;
 	}

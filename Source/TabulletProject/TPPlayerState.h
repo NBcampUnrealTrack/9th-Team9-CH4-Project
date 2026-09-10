@@ -23,10 +23,14 @@ public:
 
 	UPROPERTY(ReplicatedUsing = OnRep_IsEliminated, BlueprintReadOnly, Category = "Match")
 	bool bIsEliminated = false;
+
+	UPROPERTY(ReplicatedUsing = OnRep_IsTableEliminated, BlueprintReadOnly, Category = "Table")
+	bool bIsTableEliminated = false;
 	
 	void SetPlayerIndex(int32 NewPlayerIndex);
 	void SetRemainingPieceCount(int32 NewRemainingPieceCount);
 	void SetEliminated(bool bNewIsEliminated);
+	void SetTableEliminated(bool bNewIsTableEliminated);
 
 	UFUNCTION()
 	void OnRep_PlayerIndex();
@@ -37,6 +41,9 @@ public:
 	UFUNCTION()
 	void OnRep_IsEliminated();
 
+	UFUNCTION()
+	void OnRep_IsTableEliminated();
+
 	UFUNCTION(BlueprintImplementableEvent, Category = "Player")
 	void OnPlayerIndexChanged(int32 NewPlayerIndex);
 
@@ -45,6 +52,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Match")
 	void OnEliminatedChanged(bool bNewIsEliminated);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Table")
+	void OnTableEliminatedChanged(bool bNewIsTableEliminated);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };
