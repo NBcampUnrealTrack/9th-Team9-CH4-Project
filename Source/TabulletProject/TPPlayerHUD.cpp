@@ -132,6 +132,11 @@ void ATPPlayerHUD::UpdateMatchStatusState(float DeltaSeconds)
 			bShowGameStartMessage = true;
 			GameStartMessageElapsedTime = 0.0f;
 		}
+		else if (TPGameState->MatchPhase == ETabulletMatchPhase::ShootingPhase)
+		{
+			bShowShootingPhaseMessage = true;
+			ShootingPhaseMessageElapsedTime = 0.0f;
+		}
 	}
 
 	if (bShowGameStartMessage)
@@ -140,6 +145,15 @@ void ATPPlayerHUD::UpdateMatchStatusState(float DeltaSeconds)
 		if (GameStartMessageElapsedTime >= 1.0f)
 		{
 			bShowGameStartMessage = false;
+		}
+	}
+
+	if (bShowShootingPhaseMessage)
+	{
+		ShootingPhaseMessageElapsedTime += DeltaSeconds;
+		if (ShootingPhaseMessageElapsedTime >= 3.0f)
+		{
+			bShowShootingPhaseMessage = false;
 		}
 	}
 }
@@ -171,7 +185,9 @@ FText ATPPlayerHUD::GetMatchStatusText() const
 			? NSLOCTEXT("TPPlayerHUD", "MatchStatusGameStart", "Game Start")
 			: FText::GetEmpty();
 	case ETabulletMatchPhase::ShootingPhase:
-		return NSLOCTEXT("TPPlayerHUD", "MatchStatusShootingPhase", "Shooting Phase");
+		return bShowShootingPhaseMessage
+			? NSLOCTEXT("TPPlayerHUD", "MatchStatusShootingPhase", "Shooting Phase")
+			: FText::GetEmpty();
 	case ETabulletMatchPhase::GameOver:
 		return NSLOCTEXT("TPPlayerHUD", "MatchStatusGameOver", "Game Over");
 	default:
