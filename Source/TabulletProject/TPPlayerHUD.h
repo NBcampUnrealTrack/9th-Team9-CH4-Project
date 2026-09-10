@@ -68,6 +68,8 @@ private:
 
 	float RefreshElapsedTime = 0.0f;
 	float GameStartMessageElapsedTime = 0.0f;
+	float ShootingPhaseMessageElapsedTime = 0.0f;
 	int32 LastObservedMatchPhase = INDEX_NONE;
 	bool bShowGameStartMessage = false;
+	bool bShowShootingPhaseMessage = false;
 };
