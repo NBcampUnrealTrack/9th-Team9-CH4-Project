@@ -10,6 +10,7 @@
 #include "../Component/InteractionComponent.h"
 #include "../Component/AimAndShootComponent.h"
 #include "../Component/HealthComponent.h"
+#include "TabulletProject/Component/AmmoComponent.h"
 
 // Sets default values
 ATPCharacter::ATPCharacter()
@@ -67,6 +68,25 @@ void ATPCharacter::ServerDebugDamage_Implementation(float Amount)
 		const float Applied = Health->ApplyHealthDamage(Amount, GetController());
 		UE_LOG(LogTemp, Warning, TEXT("DebugDamage: %.1f applied, Health now %.1f"),
 			Applied, Health->GetHealth());
+	}
+}
+
+void ATPCharacter::DebugAmmo(int32 Count)
+{
+	ServerDebugAmmo(Count);
+}
+
+void ATPCharacter::ServerDebugAmmo_Implementation(int32 Count)
+{
+	UAmmoComponent* Ammo = FindComponentByClass<UAmmoComponent>();
+	UE_LOG(LogTemp, Warning, TEXT("[DebugAmmo] Ammo %d, Count %d"),
+		Ammo != nullptr ? 1 : 0, Count);
+	
+	if (Ammo)
+	{
+		Ammo->SetAmmoCount(EWeaponType::Revolver, Count);
+		Ammo->SetAmmoCount(EWeaponType::Shotgun, Count);
+		Ammo->SetAmmoCount(EWeaponType::Sniper, Count);
 	}
 }
 
