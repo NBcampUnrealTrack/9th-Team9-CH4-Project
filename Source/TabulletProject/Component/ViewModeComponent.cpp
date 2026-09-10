@@ -79,19 +79,16 @@ void UViewModeComponent::UpdateViewModeFromPhase()
 		return;
 	}
 
-	switch (GameStateRef->MatchPhase)
+	const ETabulletMatchPhase Phase = GameStateRef->MatchPhase;
+
+	// 알까기 페이즈는 더 이상 턴 기준으로 자동 전환하지 않는다 — 누구 턴인지는 HUD가
+	// 따로 보여주고, 시점은 T키 수동 토글로만 바뀐다. 사격 페이즈 진입 시에만 전원 1인칭으로 강제.
+	if (Phase == ETabulletMatchPhase::ShootingPhase && LastCheckedMatchPhase != ETabulletMatchPhase::ShootingPhase)
 	{
-	case ETabulletMatchPhase::InGame:
-		SetViewMode(EViewMode::TopDown);
-		break;
-		
-	case ETabulletMatchPhase::ShootingPhase:
 		SetViewMode(EViewMode::FirstPerson);
-		break;
-		
-	default:
-		break;
 	}
+
+	LastCheckedMatchPhase = Phase;
 }
 
 void UViewModeComponent::SetViewMode(EViewMode NewMode)
@@ -120,7 +117,23 @@ void UViewModeComponent::SetViewMode(EViewMode NewMode)
 		SyncRot.Roll = 0.f;
 		OwnerController->SetControlRotation(SyncRot);
 	}
-	
+	else if (CurrentMode == EViewMode::TopDown && OwnerPawn)
+	{
+		OwnerPawn->bUseControllerRotationYaw = false;
+
+		FRotator BodyRot = OwnerPawn->GetActorRotation();
+		BodyRot.Yaw = TopDownYaw;
+		OwnerPawn->SetActorRotation(BodyRot);
+
+		if (OwnerController)
+		{
+			FRotator ControlRot = BodyRot;
+			ControlRot.Pitch = 0.f;
+			ControlRot.Roll = 0.f;
+			OwnerController->SetControlRotation(ControlRot);
+		}
+	}
+
 	if (ATPPlayerController* TPPC = Cast<ATPPlayerController>(OwnerController))
 	{
 		TPPC->RefreshMouseInputMode();

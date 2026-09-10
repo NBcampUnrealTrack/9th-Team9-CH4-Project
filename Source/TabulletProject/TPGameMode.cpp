@@ -635,8 +635,8 @@ bool ATPGameMode::UpdateEliminationsAndCheckGameOver()
 			TPPlayerState->SetTableEliminated(true);
 		}
 	}
-
-	if (!bHasAnyOwnedPiece)
+	
+	if (!bTablePiecesSpawned)
 	{
 		return false;
 	}
@@ -776,6 +776,12 @@ void ATPGameMode::AdvanceShootingTurn()
 	StartNextTableRound();
 }
 
+bool ATPGameMode::IsCurrentShootingTurnController(AController* Controller) const
+{
+	return Controller && Controller->PlayerState && ShootingTurnOrder.IsValidIndex(CurrentShootingTurnIndex)
+		&& Controller->PlayerState == ShootingTurnOrder[CurrentShootingTurnIndex];
+}
+
 void ATPGameMode::NotifyShotResolved(AController* ShootingController)
 {
 	ATPGameState* TPGameState = GetGameState<ATPGameState>();
@@ -784,7 +790,9 @@ void ATPGameMode::NotifyShotResolved(AController* ShootingController)
 		return;
 	}
 
-	if (!IsCurrentTurnController(ShootingController))
+	// 사격 페이즈는 ShootingTurnOrder/CurrentShootingTurnIndex 기준으로 진행되므로,
+	// 알까기용 TurnOrder를 참조하는 IsCurrentTurnController가 아니라 이걸로 검증해야 함
+	if (!IsCurrentShootingTurnController(ShootingController))
 	{
 		return;
 	}

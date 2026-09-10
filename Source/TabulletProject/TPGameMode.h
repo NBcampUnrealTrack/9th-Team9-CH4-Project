@@ -65,6 +65,7 @@ protected:
 	void StartShootingPhase(APlayerState* TableWinner);
 	void BuildShootingTurnOrder();
 	void AdvanceShootingTurn();
+	bool IsCurrentShootingTurnController(AController* Controller) const;
 	bool CheckShootingGameOver();
 	bool IsPlayerAlive(APlayerState* PlayerState) const;
 	bool HasAnyAmmo(APlayerState* PlayerState) const;
@@ -83,7 +84,7 @@ protected:
 	float AutoStartDelay = 3.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Spawn", meta = (ClampMin = "0"))
-	int32 PiecesPerPlayer = 4;
+	int32 PiecesPerPlayer = 1;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Spawn", meta = (ClampMin = "0"))
 	int32 SpecialPieceCount = 1;

@@ -4,6 +4,7 @@
 #include "TPGameState.h"
 #include "Component/ViewModeComponent.h"
 #include "EngineUtils.h"
+#include "GameFramework/Pawn.h"
 #include "TPPlayerState.h"
 #include "Table/Components/TableFlickInputComponent.h"
 #include "Table/Actors/FlickTableBase.h"
@@ -71,6 +72,9 @@ void ATPPlayerController::RefreshMouseInputMode()
 		AFlickTableBase* FlickTable = bEnableTableInput ? FindFlickTable() : nullptr;
 		TableFlickInputComponent->SetTableInputEnabled(bEnableTableInput, FlickTable);
 	}
+	
+	ResetIgnoreLookInput();
+	SetIgnoreLookInput(bShowTopDownCursor);
 
 	if (bShowTopDownCursor)
 	{
@@ -78,12 +82,10 @@ void ATPPlayerController::RefreshMouseInputMode()
 		InputMode.SetHideCursorDuringCapture(false);
 		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 		SetInputMode(InputMode);
-		SetIgnoreLookInput(true);
 	}
 	else
 	{
 		SetInputMode(FInputModeGameOnly());
-		SetIgnoreLookInput(false);
 	}
 }
 
@@ -131,8 +133,10 @@ AFlickTableBase* ATPPlayerController::FindFlickTable()
 
 bool ATPPlayerController::IsTopDownViewMode() const
 {
-	const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
-	return TPGameState && TPGameState->MatchPhase == ETabulletMatchPhase::InGame;
+	// 내 턴이어도 1인칭으로 전환돼 있으면 사격 페이즈처럼 마우스로 자유롭게 시점을 움직일 수 있어야 함
+	const APawn* MyPawn = GetPawn();
+	const UViewModeComponent* PawnViewMode = MyPawn ? MyPawn->FindComponentByClass<UViewModeComponent>() : nullptr;
+	return PawnViewMode && !PawnViewMode->IsFirstPerson();
 }
 
 bool ATPPlayerController::ShouldEnableTableInput() const
@@ -155,6 +159,6 @@ bool ATPPlayerController::ShouldEnableTableInput() const
 	{
 		return false;
 	}
-
-	return IsTopDownViewMode();
+	
+	return true;
 }
