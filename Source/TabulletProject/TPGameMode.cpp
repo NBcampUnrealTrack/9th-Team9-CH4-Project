@@ -169,6 +169,24 @@ AActor* ATPGameMode::ChoosePlayerStart_Implementation(AController* Player)
 	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
+UClass* ATPGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
+{
+	const ATPGameState* TPGameState = GetGameState<ATPGameState>();
+	const APlayerState* PlayerState = InController ? InController->PlayerState : nullptr;
+	
+	const int32 PlayerIndex = TPGameState && PlayerState ? TPGameState->PlayerArray.IndexOfByKey(PlayerState) : INDEX_NONE;
+	
+	if (DebugCharacterClasses.IsValidIndex(PlayerIndex) && DebugCharacterClasses[PlayerIndex])
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug Character] Player %d -> %s"),
+			PlayerIndex, *DebugCharacterClasses[PlayerIndex]->GetName());
+		
+		return DebugCharacterClasses[PlayerIndex].Get();
+	}
+	
+	return Super::GetDefaultPawnClassForController_Implementation(InController);
+}
+
 bool ATPGameMode::IsPlayerStartOccupied(const AActor* PlayerStart) const
 {
 	if (!PlayerStart || !GetWorld())
@@ -635,8 +653,8 @@ bool ATPGameMode::UpdateEliminationsAndCheckGameOver()
 			TPPlayerState->SetTableEliminated(true);
 		}
 	}
-
-	if (!bHasAnyOwnedPiece)
+	
+	if (!bTablePiecesSpawned)
 	{
 		return false;
 	}
@@ -672,11 +690,6 @@ void ATPGameMode::AwardAmmoForFallenPiece(ATableBulletPiece* FallenPiece, APlaye
 		return;
 	}
 
-	if (FallenPiece->GetPieceType() != ETablePieceType::Special)
-	{
-		return;
-	}
-
 	ATPCharacter* CapturingCharacter = GetCharacterForPlayerState(CapturingPlayer);
 	UAmmoComponent* AmmoComponent = CapturingCharacter ? CapturingCharacter->FindComponentByClass<UAmmoComponent>() : nullptr;
 	if (!AmmoComponent)
@@ -684,7 +697,10 @@ void ATPGameMode::AwardAmmoForFallenPiece(ATableBulletPiece* FallenPiece, APlaye
 		return;
 	}
 
-	const EWeaponType AmmoType = FallenPiece->GetRewardWeaponType();
+	const EWeaponType AmmoType = FallenPiece->GetPieceType() == ETablePieceType::Special
+		? FallenPiece->GetRewardWeaponType()
+		: EWeaponType::Revolver;
+
 	AmmoComponent->SetAmmoCount(AmmoType, AmmoComponent->GetAmmoCount(AmmoType) + 1);
 	UE_LOG(LogTemp, Log, TEXT("Awarded ammo. Player=%s Type=%d"), *CapturingPlayer->GetPlayerName(), static_cast<int32>(AmmoType));
 }
@@ -722,7 +738,7 @@ void ATPGameMode::BuildShootingTurnOrder()
 
 	for (APlayerState* PlayerState : TPGameState->PlayerArray)
 	{
-		if (IsValid(PlayerState) && PlayerState == TablePhaseWinner && IsPlayerAlive(PlayerState) && HasAnyAmmo(PlayerState))
+		if (IsValid(PlayerState) && IsPlayerAlive(PlayerState) && HasAnyAmmo(PlayerState))
 		{
 			ShootingTurnOrder.Add(PlayerState);
 		}
@@ -730,16 +746,6 @@ void ATPGameMode::BuildShootingTurnOrder()
 
 	ShootingTurnOrder.Sort([this](const TObjectPtr<APlayerState>& Left, const TObjectPtr<APlayerState>& Right)
 	{
-		if (Left == TablePhaseWinner)
-		{
-			return true;
-		}
-
-		if (Right == TablePhaseWinner)
-		{
-			return false;
-		}
-
 		const int32 LeftAmmo = GetTotalAmmoCount(Left.Get());
 		const int32 RightAmmo = GetTotalAmmoCount(Right.Get());
 		if (LeftAmmo != RightAmmo)
@@ -788,6 +794,12 @@ void ATPGameMode::AdvanceShootingTurn()
 	StartNextTableRound();
 }
 
+bool ATPGameMode::IsCurrentShootingTurnController(AController* Controller) const
+{
+	return Controller && Controller->PlayerState && ShootingTurnOrder.IsValidIndex(CurrentShootingTurnIndex)
+		&& Controller->PlayerState == ShootingTurnOrder[CurrentShootingTurnIndex];
+}
+
 void ATPGameMode::NotifyShotResolved(AController* ShootingController)
 {
 	ATPGameState* TPGameState = GetGameState<ATPGameState>();
@@ -796,7 +808,9 @@ void ATPGameMode::NotifyShotResolved(AController* ShootingController)
 		return;
 	}
 
-	if (!IsCurrentTurnController(ShootingController))
+	// 사격 페이즈는 ShootingTurnOrder/CurrentShootingTurnIndex 기준으로 진행되므로,
+	// 알까기용 TurnOrder를 참조하는 IsCurrentTurnController가 아니라 이걸로 검증해야 함
+	if (!IsCurrentShootingTurnController(ShootingController))
 	{
 		return;
 	}
@@ -806,7 +820,7 @@ void ATPGameMode::NotifyShotResolved(AController* ShootingController)
 		return;
 	}
 
-	StartNextTableRound();
+	AdvanceShootingTurn();
 }
 
 bool ATPGameMode::CheckShootingGameOver()
