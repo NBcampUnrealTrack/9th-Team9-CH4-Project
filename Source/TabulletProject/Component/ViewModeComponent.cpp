@@ -201,11 +201,14 @@ void UViewModeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 
 	if (CurrentMode == EViewMode::TopDown)
 	{
-		FRotator CurrentRot = SpringArm->GetComponentRotation();
-		CurrentRot.Pitch = FMath::FInterpTo(CurrentRot.Pitch, TopDownPitch, DeltaTime, BlendSpeed);
-		CurrentRot.Yaw = FMath::FInterpTo(CurrentRot.Yaw, TopDownYaw, DeltaTime, BlendSpeed);
-		CurrentRot.Roll = 0.f;
-		SpringArm->SetWorldRotation(CurrentRot);
+		const FQuat CurrentQuat = SpringArm->GetRelativeTransform().GetRotation();
+		const FQuat TargetQuat = FRotator(TopDownPitch, 0.f, 0.f).Quaternion();
+		
+		const float Alpha = 1.f - FMath::Exp(-BlendSpeed * DeltaTime);
+		
+		const FQuat NewQuat = FQuat::Slerp(CurrentQuat, TargetQuat, Alpha).GetNormalized();
+		
+		SpringArm->SetRelativeRotation(NewQuat);
 	}
 	
 	if (!Blending)
