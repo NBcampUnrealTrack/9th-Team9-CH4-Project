@@ -265,6 +265,16 @@ void AFlickTableBase::ForceFinishFlickResolution()
 		return;
 	}
 
+	RegisteredPieces.RemoveAll([](const TObjectPtr<ATableBulletPiece>& Piece)
+	{
+		return !IsValid(Piece);
+	});
+
+	for (ATableBulletPiece* RegisteredPiece : RegisteredPieces)
+	{
+		RegisteredPiece->StopPhysicsMovement();
+	}
+
 	bMonitoringPieceMovement = false;
 	SettledElapsedTime = 0.0f;
 	ActiveFlickPlayerState = nullptr;

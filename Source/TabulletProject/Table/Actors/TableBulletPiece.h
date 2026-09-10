@@ -31,6 +31,9 @@ public:
 	bool ApplyFlickImpulse(const FVector& WorldImpulse);
 
 	bool IsMoving(float LinearThreshold, float AngularThreshold) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Movement")
+	void StopPhysicsMovement();
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Ownership")
 	void SetOwningPlayerState(APlayerState* InOwningPlayerState);

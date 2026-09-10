@@ -112,6 +112,20 @@ bool ATableBulletPiece::IsMoving(float LinearThreshold, float AngularThreshold) 
 	return LinearSpeedSquared > FMath::Square(LinearThreshold) || AngularSpeedSquared > FMath::Square(AngularThreshold);
 }
 
+void ATableBulletPiece::StopPhysicsMovement()
+{
+	if (!HasAuthority() || IsOut() || !IsValid(PieceMesh) || !PieceMesh->IsSimulatingPhysics())
+	{
+		return;
+	}
+
+	PieceMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
+	PieceMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+	PieceMesh->PutAllRigidBodiesToSleep();
+
+	ForceNetUpdate();
+}
+
 void ATableBulletPiece::SetOwningPlayerState(APlayerState* InOwningPlayerState)	// 서버에서 총알 소유자 정함
 {
 	if (!HasAuthority() || PieceType != ETablePieceType::Normal)
