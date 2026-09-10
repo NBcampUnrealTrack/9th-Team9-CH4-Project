@@ -29,7 +29,17 @@ bool UInteractionComponent::IsMyTurn() const
 	const ATPGameState* TPGameState = GetTPGameState();
 	const ATPPlayerState* MyPlayerState = GetOwnerPlayerState();
 	
-	if (!TPGameState || !MyPlayerState || MyPlayerState->bIsEliminated)
+	if (!TPGameState || !MyPlayerState)
+	{
+		return false;
+	}
+
+	if (TPGameState->MatchPhase == ETabulletMatchPhase::InGame && MyPlayerState->bIsTableEliminated)
+	{
+		return false;
+	}
+
+	if (TPGameState->MatchPhase == ETabulletMatchPhase::ShootingPhase && MyPlayerState->bIsEliminated)
 	{
 		return false;
 	}
@@ -42,7 +52,7 @@ bool UInteractionComponent::CanFlick() const
 	const ATPGameState* TPGameState = GetTPGameState();
 	const ATPPlayerState* MyPlayerState = GetOwnerPlayerState();
 	
-	if (!TPGameState || !MyPlayerState || MyPlayerState->bIsEliminated)
+	if (!TPGameState || !MyPlayerState || MyPlayerState->bIsTableEliminated)
 	{
 		return false;
 	}
@@ -62,8 +72,8 @@ bool UInteractionComponent::CanShoot() const
 		return false;
 	}
 	
-	// TODO: Shooting 페이즈 추가되면 실제 사격 가능 조건으로 교체
-	return TPGameState->MatchPhase == ETabulletMatchPhase::GameOver
-		&& TPGameState->WinnerPlayerState == MyPlayerState;
+	return TPGameState->MatchPhase == ETabulletMatchPhase::ShootingPhase
+		&& TPGameState->TurnPhase == ETabulletTurnPhase::WaitingForShot
+		&& TPGameState->CurrentTurnPlayerState == MyPlayerState;
 }
 

@@ -32,6 +32,15 @@ void ATPPlayerState::SetEliminated(bool bNewIsEliminated)
 	}
 }
 
+void ATPPlayerState::SetTableEliminated(bool bNewIsTableEliminated)
+{
+	if (HasAuthority() && bIsTableEliminated != bNewIsTableEliminated)
+	{
+		bIsTableEliminated = bNewIsTableEliminated;
+		OnTableEliminatedChanged(bIsTableEliminated);
+	}
+}
+
 void ATPPlayerState::OnRep_PlayerIndex()
 {
 	OnPlayerIndexChanged(PlayerIndex);
@@ -47,6 +56,11 @@ void ATPPlayerState::OnRep_IsEliminated()
 	OnEliminatedChanged(bIsEliminated);
 }
 
+void ATPPlayerState::OnRep_IsTableEliminated()
+{
+	OnTableEliminatedChanged(bIsTableEliminated);
+}
+
 void ATPPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -54,5 +68,6 @@ void ATPPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(ATPPlayerState, PlayerIndex);
 	DOREPLIFETIME(ATPPlayerState, RemainingPieceCount);
 	DOREPLIFETIME(ATPPlayerState, bIsEliminated);
+	DOREPLIFETIME(ATPPlayerState, bIsTableEliminated);
 }
 

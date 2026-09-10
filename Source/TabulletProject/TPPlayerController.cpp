@@ -4,6 +4,12 @@
 #include "TPGameState.h"
 #include "Component/ViewModeComponent.h"
 #include "EngineUtils.h"
+#include "GameFramework/Pawn.h"
+#include "TPPlayerState.h"
+#include "TabulletProject/Component/WeaponManagerComponent.h"
+#include "TabulletProject/Component/AmmoComponent.h"
+#include "WeaponBase.h"
+#include "Blueprint/UserWidget.h"
 #include "Table/Components/TableFlickInputComponent.h"
 #include "Table/Actors/FlickTableBase.h"
 
@@ -70,19 +76,56 @@ void ATPPlayerController::RefreshMouseInputMode()
 		AFlickTableBase* FlickTable = bEnableTableInput ? FindFlickTable() : nullptr;
 		TableFlickInputComponent->SetTableInputEnabled(bEnableTableInput, FlickTable);
 	}
+	
+	ResetIgnoreLookInput();
+	SetIgnoreLookInput(bShowTopDownCursor);
+	bShowMouseCursor = bShowTopDownCursor;
+	
+	if (bShowTopDownCursor)
+	{
+		HideCrosshair();
+	}
+	else
+	{
+		const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
+		const bool bIsMyShootingTurn = TPGameState && PlayerState
+			&& TPGameState->CurrentTurnPlayerState == PlayerState;
 
+		bool bHasAmmo = false;
+		if (const APawn* OwnedPawn = GetPawn())
+		{
+			const UWeaponManagerComponent* WeaponManager = OwnedPawn->FindComponentByClass<UWeaponManagerComponent>();
+			const UAmmoComponent* AmmoComp = OwnedPawn->FindComponentByClass<UAmmoComponent>();
+
+			if (WeaponManager && AmmoComp)
+			{
+				if (const AWeaponBase* CurrentWeapon = WeaponManager->GetCurrentWeapon())
+				{
+					bHasAmmo = AmmoComp->HasAmmo(CurrentWeapon->WeaponType);
+				}
+			}
+		}
+
+		if (bIsMyShootingTurn && bHasAmmo)
+		{
+			ShowCrosshair();
+		}
+		else
+		{
+			HideCrosshair();
+		}
+	}
+	
 	if (bShowTopDownCursor)
 	{
 		FInputModeGameAndUI InputMode;
 		InputMode.SetHideCursorDuringCapture(false);
 		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 		SetInputMode(InputMode);
-		SetIgnoreLookInput(true);
 	}
 	else
 	{
 		SetInputMode(FInputModeGameOnly());
-		SetIgnoreLookInput(false);
 	}
 }
 
@@ -130,9 +173,10 @@ AFlickTableBase* ATPPlayerController::FindFlickTable()
 
 bool ATPPlayerController::IsTopDownViewMode() const
 {
-	const APawn* ControlledPawn = GetPawn();
-	const UViewModeComponent* ViewModeComponent = ControlledPawn ? ControlledPawn->FindComponentByClass<UViewModeComponent>() : nullptr;
-	return ViewModeComponent && !ViewModeComponent->IsFirstPerson();
+	// 내 턴이어도 1인칭으로 전환돼 있으면 사격 페이즈처럼 마우스로 자유롭게 시점을 움직일 수 있어야 함
+	const APawn* MyPawn = GetPawn();
+	const UViewModeComponent* PawnViewMode = MyPawn ? MyPawn->FindComponentByClass<UViewModeComponent>() : nullptr;
+	return PawnViewMode && !PawnViewMode->IsFirstPerson();
 }
 
 bool ATPPlayerController::ShouldEnableTableInput() const
@@ -150,5 +194,37 @@ bool ATPPlayerController::ShouldEnableTableInput() const
 		return false;
 	}
 
-	return IsTopDownViewMode();
+	const ATPPlayerState* TPPlayerState = GetPlayerState<ATPPlayerState>();
+	if (TPPlayerState && TPPlayerState->bIsTableEliminated)
+	{
+		return false;
+	}
+	
+	return true;
+}
+
+void ATPPlayerController::ShowCrosshair()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	if (!CrosshairWidgetInstance && CrosshairWidgetClass)
+	{
+		CrosshairWidgetInstance = CreateWidget<UUserWidget>(this, CrosshairWidgetClass);
+	}
+
+	if (CrosshairWidgetInstance && !CrosshairWidgetInstance->IsInViewport())
+	{
+		CrosshairWidgetInstance->AddToViewport();
+	}
+}
+
+void ATPPlayerController::HideCrosshair()
+{
+	if (CrosshairWidgetInstance && CrosshairWidgetInstance->IsInViewport())
+	{
+		CrosshairWidgetInstance->RemoveFromParent();
+	}
 }

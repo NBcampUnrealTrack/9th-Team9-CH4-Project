@@ -8,7 +8,7 @@ class AFlickTableBase;
 class ATableBulletPiece;
 class UTableFlickInputComponent;
 class ATPGameState;
-
+class UUserWidget;
 /**
  * 
  */
@@ -35,6 +35,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	void RefreshMouseInputMode();
+	
+	void ShowCrosshair();
+	void HideCrosshair();
 
 protected:
 	void BindGameStateInputEvents();
@@ -50,4 +53,10 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<AFlickTableBase> CachedFlickTable;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> CrosshairWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> CrosshairWidgetInstance;
 };

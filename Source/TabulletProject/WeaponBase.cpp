@@ -69,12 +69,34 @@ void AWeaponBase::Server_Fire_Implementation()
         UE_LOG(LogTemp, Warning, TEXT("[Weapon] 탄약 없음, 발사 취소: %s"), *UEnum::GetValueAsString(WeaponType));
         return;
     }
+	// 모션 완성하면 주석 제거
+    // FVector StartLocation = WeaponMesh->GetSocketLocation(TEXT("MuzzleSocket"));
+    // FVector ForwardVector = WeaponMesh->GetSocketRotation(TEXT("MuzzleSocket")).Vector();
+	
+	// 통합 테스트용 임시 t포즈 사격
+	ATPCharacter* OwnerCharacter = Cast<ATPCharacter>(GetOwner());
+	if (!OwnerCharacter)
+	{
+		return;
+	}
 
-    FVector StartLocation = WeaponMesh->GetSocketLocation(TEXT("MuzzleSocket"));
-    FVector ForwardVector = WeaponMesh->GetSocketRotation(TEXT("MuzzleSocket")).Vector();
+	AController* OwnerController = OwnerCharacter->GetController();
+	if (!OwnerController)
+	{
+		return;
+	}
+
+	FVector StartLocation;
+	FRotator ViewRotation;
+
+	OwnerController->GetPlayerViewPoint(StartLocation, ViewRotation);
+	FVector ForwardVector = ViewRotation.Vector();
+	UE_LOG(LogTemp, Warning, TEXT("[Weapon Test] Start=%s, Forawrd=%s, Range=%.1f, Damage=%d"),
+		*StartLocation.ToString(), *ForwardVector.ToString(), Range, Damage);
 
     FCollisionQueryParams QueryParams;
     QueryParams.AddIgnoredActor(this);
+    QueryParams.AddIgnoredActor(OwnerCharacter); // 통합 테스트 t포즈 사격용
 
     int32 NumPellets = FMath::Max(PelletCount, 1);
     TSet<AActor*> HitActors;
@@ -103,11 +125,20 @@ void AWeaponBase::Server_Fire_Implementation()
         if (bHit)
         {
             AActor* HitActor = HitResult.GetActor();
-            if (HitActor && !HitActors.Contains(HitActor))
+            UPrimitiveComponent* HitComponent = HitResult.GetComponent();
+        	
+        	FString HitActorName = HitActor ? HitActor->GetName() : TEXT("None");
+        	FString HitComponentName = HitComponent ? HitComponent->GetName() : TEXT("None");
+        	FString ImpactPointString = FVector(HitResult.ImpactPoint).ToString();
+        	
+        	UE_LOG(LogTemp, Warning, TEXT("[Weapon Test] Hit Actor=%s / Component=%s / Impact=%s"),
+        		*HitActorName, *HitComponentName, *ImpactPointString);
+        	
+        	if (HitActor && !HitActors.Contains(HitActor))
             {
                 HitActors.Add(HitActor);
 
-                UE_LOG(LogTemp, Warning, TEXT("%s hit %s with %s (Damage: %.1d)"),
+                UE_LOG(LogTemp, Warning, TEXT("%s hit %s with %s (Damage: %d)"),
                     *GetName(), *HitActor->GetName(), *UEnum::GetValueAsString(WeaponType), Damage);
 
             	ATPCharacter* HitCharacter = Cast<ATPCharacter>(HitActor);

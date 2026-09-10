@@ -6,6 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/Controller.h"
 #include "../TPGameState.h"
+#include "../TPPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
 // Sets default values for this component's properties
@@ -42,20 +43,33 @@ void UViewModeComponent::BeginPlay()
 	SpringArm->TargetArmLength = ArmLength;
 	SpringArm->SetRelativeLocation(Offset);
 	UpdateRotationSource();
-	
-	if (const APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+
+	TryBindGameState();
+}
+
+void UViewModeComponent::TryBindGameState()
+{
+	if (bBoundToGameState)
 	{
-		if (OwnerPawn->IsLocallyControlled())
-		{
-			GameStateRef = GetWorld()->GetGameState<ATPGameState>();
-			if (GameStateRef)
-			{
-				GameStateRef->OnReplicatedTurnStateChanged.AddUObject(
-					this, &UViewModeComponent::UpdateViewModeFromPhase);
-				UpdateViewModeFromPhase();
-			}
-		}
+		return;
 	}
+
+	const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	if (!OwnerPawn || !OwnerPawn->IsLocallyControlled())
+	{
+		return;
+	}
+
+	GameStateRef = GetWorld()->GetGameState<ATPGameState>();
+	if (!GameStateRef)
+	{
+		return;
+	}
+
+	GameStateRef->OnReplicatedTurnStateChanged.AddUObject(
+		this, &UViewModeComponent::UpdateViewModeFromPhase);
+	bBoundToGameState = true;
+	UpdateViewModeFromPhase();
 }
 
 void UViewModeComponent::UpdateViewModeFromPhase()
@@ -65,19 +79,16 @@ void UViewModeComponent::UpdateViewModeFromPhase()
 		return;
 	}
 
-	switch (GameStateRef->MatchPhase)
+	const ETabulletMatchPhase Phase = GameStateRef->MatchPhase;
+
+	// 알까기 페이즈는 더 이상 턴 기준으로 자동 전환하지 않는다 — 누구 턴인지는 HUD가
+	// 따로 보여주고, 시점은 T키 수동 토글로만 바뀐다. 사격 페이즈 진입 시에만 전원 1인칭으로 강제.
+	if (Phase == ETabulletMatchPhase::ShootingPhase && LastCheckedMatchPhase != ETabulletMatchPhase::ShootingPhase)
 	{
-	case ETabulletMatchPhase::InGame:
-		SetViewMode(EViewMode::TopDown);
-		break;
-		
-	case ETabulletMatchPhase::ShootingPhase:
 		SetViewMode(EViewMode::FirstPerson);
-		break;
-		
-	default:
-		break;
 	}
+
+	LastCheckedMatchPhase = Phase;
 }
 
 void UViewModeComponent::SetViewMode(EViewMode NewMode)
@@ -89,25 +100,43 @@ void UViewModeComponent::SetViewMode(EViewMode NewMode)
 	
 	CurrentMode = NewMode;
 	Blending = true;
-	
+
 	if (CurrentMode == EViewMode::TopDown && HeadMovement)
 	{
 		HeadMovement->ResetStretch();
 	}
-	
-	if (CurrentMode == EViewMode::FirstPerson)
+
+	APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	AController* OwnerController = OwnerPawn ? OwnerPawn->GetController() : nullptr;
+
+	if (CurrentMode == EViewMode::FirstPerson && OwnerController)
 	{
 		// 탑뷰 동안 어긋난 몸 방향과 시선을 다시 맞춤
-		if (APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+		FRotator SyncRot = OwnerPawn->GetActorRotation();
+		SyncRot.Pitch = 0.f;
+		SyncRot.Roll = 0.f;
+		OwnerController->SetControlRotation(SyncRot);
+	}
+	else if (CurrentMode == EViewMode::TopDown && OwnerPawn)
+	{
+		OwnerPawn->bUseControllerRotationYaw = false;
+
+		FRotator BodyRot = OwnerPawn->GetActorRotation();
+		BodyRot.Yaw = TopDownYaw;
+		OwnerPawn->SetActorRotation(BodyRot);
+
+		if (OwnerController)
 		{
-			if (AController* OwnerController = OwnerPawn->GetController())
-			{
-				FRotator SyncRot = OwnerPawn->GetActorRotation();
-				SyncRot.Pitch = 0.f;
-				SyncRot.Roll = 0.f;
-				OwnerController->SetControlRotation(SyncRot);
-			}
+			FRotator ControlRot = BodyRot;
+			ControlRot.Pitch = 0.f;
+			ControlRot.Roll = 0.f;
+			OwnerController->SetControlRotation(ControlRot);
 		}
+	}
+
+	if (ATPPlayerController* TPPC = Cast<ATPPlayerController>(OwnerController))
+	{
+		TPPC->RefreshMouseInputMode();
 	}
 }
 
@@ -166,9 +195,10 @@ void UViewModeComponent::TickComponent(float DeltaTime, ELevelTick TickType, FAc
 	{
 		return;
 	}
-	
+
+	TryBindGameState();
 	UpdateRotationSource();
-	
+
 	if (CurrentMode == EViewMode::TopDown)
 	{
 		FRotator CurrentRot = SpringArm->GetComponentRotation();

@@ -9,6 +9,7 @@
 class USpringArmComponent;
 class UHeadMovementComponent;
 class ATPGameState;
+enum class ETabulletMatchPhase : uint8;
 
 UENUM(BlueprintType)
 enum class EViewMode : uint8
@@ -46,10 +47,17 @@ protected:
 	void GetTargetValues(float& OutArmLength, FVector& OutOffset, float& OutPitch) const;
 	void UpdateRotationSource();
 	void UpdateViewModeFromPhase();
-	
+
+	void TryBindGameState();
+
 	UPROPERTY()
 	TObjectPtr<ATPGameState> GameStateRef;
-	
+
+	bool bBoundToGameState = false;
+
+	// 사격 페이즈 "진입"을 감지하기 위한 마지막으로 본 MatchPhase (그 외엔 자동 전환 안 함)
+	ETabulletMatchPhase LastCheckedMatchPhase = static_cast<ETabulletMatchPhase>(0); // WaitingForPlayers, 매치 시작 전 기본값
+
 	UPROPERTY()
 	TObjectPtr<USpringArmComponent> SpringArm;
 	

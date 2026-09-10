@@ -76,6 +76,7 @@ void ATPGameMode::Logout(AController* Exiting)
 	if (ATPPlayerState* TPPlayerState = Exiting ? Exiting->GetPlayerState<ATPPlayerState>() : nullptr)
 	{
 		TPPlayerState->SetEliminated(true);
+		TPPlayerState->SetTableEliminated(true);
 	}
 
 	Super::Logout(Exiting);
@@ -134,7 +135,7 @@ void ATPGameMode::HandleMatchHasStarted()
 		TPGameState->SetTurnPhase(ETabulletTurnPhase::None);
 	}
 
-	InitializeTurnOrder();
+	InitializeTurnOrder(true);
 	SpawnTablePieces();
 	StartFirstTurn();
 }
@@ -166,6 +167,24 @@ AActor* ATPGameMode::ChoosePlayerStart_Implementation(AController* Player)
 	}
 
 	return Super::ChoosePlayerStart_Implementation(Player);
+}
+
+UClass* ATPGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
+{
+	const ATPGameState* TPGameState = GetGameState<ATPGameState>();
+	const APlayerState* PlayerState = InController ? InController->PlayerState : nullptr;
+	
+	const int32 PlayerIndex = TPGameState && PlayerState ? TPGameState->PlayerArray.IndexOfByKey(PlayerState) : INDEX_NONE;
+	
+	if (DebugCharacterClasses.IsValidIndex(PlayerIndex) && DebugCharacterClasses[PlayerIndex])
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug Character] Player %d -> %s"),
+			PlayerIndex, *DebugCharacterClasses[PlayerIndex]->GetName());
+		
+		return DebugCharacterClasses[PlayerIndex].Get();
+	}
+	
+	return Super::GetDefaultPawnClassForController_Implementation(InController);
 }
 
 bool ATPGameMode::IsPlayerStartOccupied(const AActor* PlayerStart) const
@@ -328,7 +347,7 @@ void ATPGameMode::AdvanceTurn()
 		CurrentTurnIndex = NextTurnIndex;
 
 		const ATPPlayerState* TPPlayerState = Cast<ATPPlayerState>(TurnOrder[CurrentTurnIndex]);
-		if (TPPlayerState && !TPPlayerState->bIsEliminated)
+		if (TPPlayerState && !TPPlayerState->bIsTableEliminated)
 		{
 			SetCurrentTurnByIndex(CurrentTurnIndex);
 			return;
@@ -401,7 +420,7 @@ void ATPGameMode::RecalculatePlayerPieceCounts()
 	}
 }
 
-void ATPGameMode::InitializeTurnOrder()
+void ATPGameMode::InitializeTurnOrder(bool bResetCombatEliminations)
 {
 	TurnOrder.Reset();
 	TableEliminationOrder.Reset();
@@ -417,7 +436,22 @@ void ATPGameMode::InitializeTurnOrder()
 	{
 		if (ATPPlayerState* TPPlayerState = Cast<ATPPlayerState>(PlayerState))
 		{
-			TPPlayerState->SetEliminated(false);
+			if (bResetCombatEliminations)
+			{
+				TPPlayerState->SetEliminated(false);
+			}
+			else
+			{
+				TPPlayerState->SetEliminated(!IsPlayerAlive(TPPlayerState));
+			}
+
+			if (!bResetCombatEliminations && TPPlayerState->bIsEliminated)
+			{
+				TPPlayerState->SetTableEliminated(true);
+				continue;
+			}
+
+			TPPlayerState->SetTableEliminated(false);
 			TurnOrder.Add(TPPlayerState);
 		}
 	}
@@ -493,6 +527,51 @@ void ATPGameMode::StartFirstTurn()
 	}
 
 	SetCurrentTurnByIndex(0);
+}
+
+void ATPGameMode::StartNextTableRound()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(ResolveCheckTimerHandle);
+	LastFlickPlayerState = nullptr;
+	TablePhaseWinner = nullptr;
+	ShootingTurnOrder.Reset();
+	CurrentShootingTurnIndex = INDEX_NONE;
+
+	if (CheckShootingGameOver())
+	{
+		return;
+	}
+
+	if (AFlickTableBase* FlickTable = FindFlickTable())
+	{
+		FlickTable->ResetTablePieces();
+	}
+
+	bTablePiecesSpawned = false;
+	InitializeTurnOrder(false);
+
+	if (TurnOrder.Num() <= 1)
+	{
+		FinishGame(TurnOrder.IsValidIndex(0) ? TurnOrder[0] : nullptr);
+		return;
+	}
+
+	if (ATPGameState* TPGameState = GetGameState<ATPGameState>())
+	{
+		TPGameState->SetWinnerPlayerState(nullptr);
+		TPGameState->SetCurrentTurnPlayerState(nullptr, TPGameState->TurnNumber);
+		TPGameState->SetTurnPhase(ETabulletTurnPhase::None);
+		TPGameState->SetMatchPhase(ETabulletMatchPhase::InGame);
+		TPGameState->SetTurnOrderPlayerStates(TurnOrder);
+	}
+
+	SpawnTablePieces();
+	StartFirstTurn();
 }
 
 void ATPGameMode::SetCurrentTurnByIndex(int32 NewTurnIndex)
@@ -736,7 +815,13 @@ void ATPGameMode::AdvanceShootingTurn()
 		}
 	}
 
-	FinishGame(TablePhaseWinner);
+	StartNextTableRound();
+}
+
+bool ATPGameMode::IsCurrentShootingTurnController(AController* Controller) const
+{
+	return Controller && Controller->PlayerState && ShootingTurnOrder.IsValidIndex(CurrentShootingTurnIndex)
+		&& Controller->PlayerState == ShootingTurnOrder[CurrentShootingTurnIndex];
 }
 
 void ATPGameMode::NotifyShotResolved(AController* ShootingController)
@@ -747,7 +832,14 @@ void ATPGameMode::NotifyShotResolved(AController* ShootingController)
 		return;
 	}
 
-	if (!IsCurrentTurnController(ShootingController))
+	// 사격 페이즈는 ShootingTurnOrder/CurrentShootingTurnIndex 기준으로 진행되므로,
+	// 알까기용 TurnOrder를 참조하는 IsCurrentTurnController가 아니라 이걸로 검증해야 함
+	if (!IsCurrentShootingTurnController(ShootingController))
+	{
+		return;
+	}
+
+	if (CheckShootingGameOver())
 	{
 		return;
 	}

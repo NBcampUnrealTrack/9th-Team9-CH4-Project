@@ -64,6 +64,12 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerDebugDamage(float Amount);
 	
+	UFUNCTION(Exec)
+	void DebugAmmo(int32 Count);
+	
+	UFUNCTION(Server, Reliable)
+	void ServerDebugAmmo(int32 Count);
+	
 	UPROPERTY()
 	TObjectPtr<UViewModeComponent> ViewModeComp;
 	
