@@ -404,6 +404,7 @@ void ATPGameMode::RecalculatePlayerPieceCounts()
 void ATPGameMode::InitializeTurnOrder()
 {
 	TurnOrder.Reset();
+	TableEliminationOrder.Reset();
 	CurrentTurnIndex = INDEX_NONE;
 
 	const ATPGameState* TPGameState = GetGameState<ATPGameState>();
@@ -550,7 +551,6 @@ bool ATPGameMode::UpdateEliminationsAndCheckGameOver()
 {
 	RecalculatePlayerPieceCounts();
 
-	bool bHasAnyOwnedPiece = false;
 	int32 ActivePlayerCount = 0;
 	APlayerState* LastActivePlayerState = nullptr;
 
@@ -562,30 +562,39 @@ bool ATPGameMode::UpdateEliminationsAndCheckGameOver()
 			continue;
 		}
 
-		if (TPPlayerState->RemainingPieceCount > 0)
+		const bool bIsEliminated = TPPlayerState->RemainingPieceCount <= 0;
+		TPPlayerState->SetEliminated(bIsEliminated);
+
+		if (!bIsEliminated)
 		{
-			bHasAnyOwnedPiece = true;
-			TPPlayerState->SetEliminated(false);
 			ActivePlayerCount++;
 			LastActivePlayerState = TPPlayerState;
 		}
-		else if (bHasAnyOwnedPiece)
-		{
-			TPPlayerState->SetEliminated(true);
-		}
 	}
 
-	if (!bHasAnyOwnedPiece)
+	if (ActivePlayerCount == 0)
 	{
-		return false;
-	}
+		APlayerState* LastEliminatedPlayerState = nullptr;
 
-	for (APlayerState* PlayerState : TurnOrder)
-	{
-		if (ATPPlayerState* TPPlayerState = Cast<ATPPlayerState>(PlayerState))
+		for (int32 Index = TableEliminationOrder.Num() - 1; Index >= 0; --Index)
 		{
-			TPPlayerState->SetEliminated(TPPlayerState->RemainingPieceCount <= 0);
+			if (IsValid(TableEliminationOrder[Index]))
+			{
+				LastEliminatedPlayerState = TableEliminationOrder[Index];
+				break;
+			}
 		}
+
+		if (!IsValid(LastEliminatedPlayerState))
+		{
+			LastEliminatedPlayerState = LastFlickPlayerState;
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("All table players were eliminated. Starting shooting phase with %s as table winner."),
+			IsValid(LastEliminatedPlayerState) ? *LastEliminatedPlayerState->GetPlayerName() : TEXT("None"));
+
+		StartShootingPhase(LastEliminatedPlayerState);
+		return true;
 	}
 
 	if (ActivePlayerCount <= 1)
@@ -600,6 +609,21 @@ bool ATPGameMode::UpdateEliminationsAndCheckGameOver()
 void ATPGameMode::HandleTablePieceFell(ATableBulletPiece* FallenPiece, APlayerState* PieceOwner)
 {
 	AwardAmmoForFallenPiece(FallenPiece, PieceOwner);
+
+	if (!HasAuthority() || !IsValid(PieceOwner))
+	{
+		return;
+	}
+
+	RecalculatePlayerPieceCounts();
+
+	const ATPPlayerState* TPPlayerState = Cast<ATPPlayerState>(PieceOwner);
+	if (TPPlayerState && TPPlayerState->RemainingPieceCount <= 0 && !TableEliminationOrder.Contains(PieceOwner))
+	{
+		TableEliminationOrder.Add(PieceOwner);
+		UE_LOG(LogTemp, Log, TEXT("Recorded table elimination: %s, order: %d"),
+			*PieceOwner->GetPlayerName(), TableEliminationOrder.Num());
+	}
 }
 
 void ATPGameMode::AwardAmmoForFallenPiece(ATableBulletPiece* FallenPiece, APlayerState* PieceOwner)

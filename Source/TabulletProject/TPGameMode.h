@@ -100,6 +100,9 @@ protected:
 	TArray<TObjectPtr<APlayerState>> ShootingTurnOrder;
 
 	UPROPERTY()
+	TArray<TObjectPtr<APlayerState>> TableEliminationOrder;
+
+	UPROPERTY()
 	TObjectPtr<APlayerState> TablePhaseWinner;
 
 	UPROPERTY()
