@@ -91,6 +91,8 @@ void AWeaponBase::Server_Fire_Implementation()
 
 	OwnerController->GetPlayerViewPoint(StartLocation, ViewRotation);
 	FVector ForwardVector = ViewRotation.Vector();
+	UE_LOG(LogTemp, Warning, TEXT("[Weapon Test] Start=%s, Forawrd=%s, Range=%.1f, Damage=%d"),
+		*StartLocation.ToString(), *ForwardVector.ToString(), Range, Damage);
 
     FCollisionQueryParams QueryParams;
     QueryParams.AddIgnoredActor(this);
@@ -123,11 +125,20 @@ void AWeaponBase::Server_Fire_Implementation()
         if (bHit)
         {
             AActor* HitActor = HitResult.GetActor();
-            if (HitActor && !HitActors.Contains(HitActor))
+            UPrimitiveComponent* HitComponent = HitResult.GetComponent();
+        	
+        	FString HitActorName = HitActor ? HitActor->GetName() : TEXT("None");
+        	FString HitComponentName = HitComponent ? HitComponent->GetName() : TEXT("None");
+        	FString ImpactPointString = FVector(HitResult.ImpactPoint).ToString();
+        	
+        	UE_LOG(LogTemp, Warning, TEXT("[Weapon Test] Hit Actor=%s / Component=%s / Impact=%s"),
+        		*HitActorName, *HitComponentName, *ImpactPointString);
+        	
+        	if (HitActor && !HitActors.Contains(HitActor))
             {
                 HitActors.Add(HitActor);
 
-                UE_LOG(LogTemp, Warning, TEXT("%s hit %s with %s (Damage: %.1d)"),
+                UE_LOG(LogTemp, Warning, TEXT("%s hit %s with %s (Damage: %d)"),
                     *GetName(), *HitActor->GetName(), *UEnum::GetValueAsString(WeaponType), Damage);
 
             	ATPCharacter* HitCharacter = Cast<ATPCharacter>(HitActor);
