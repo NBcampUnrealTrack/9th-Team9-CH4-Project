@@ -9,7 +9,6 @@
 #include "../Component/ViewModeComponent.h"
 #include "../Component/InteractionComponent.h"
 #include "../Component/AimAndShootComponent.h"
-#include "../Component/AmmoComponent.h"
 #include "../Component/HealthComponent.h"
 
 // Sets default values
@@ -52,17 +51,6 @@ void ATPCharacter::BeginPlay()
 			{
 				Subsystem->AddMappingContext(DefaultMappingContext, 0);
 			}
-		}
-	}
-	
-	// 발사 테스트용
-	if (HasAuthority())
-	{
-		if (UAmmoComponent* Ammo = FindComponentByClass<UAmmoComponent>())
-		{
-			Ammo->SetAmmoCount(EWeaponType::Revolver, 10);
-			Ammo->SetAmmoCount(EWeaponType::Shotgun, 10);
-			Ammo->SetAmmoCount(EWeaponType::Sniper, 10);
 		}
 	}
 }
