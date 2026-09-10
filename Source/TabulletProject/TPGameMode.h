@@ -28,6 +28,7 @@ public:
 	virtual void Logout(AController* Exiting) override;
 	virtual void HandleMatchHasStarted() override;
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 
 	bool CanStartGame() const;
 	void StartGame();
@@ -94,6 +95,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Turn", meta = (ClampMin = "0.1"))
 	float MaxResolveSeconds = 8.0f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Debug | Character")
+	TArray<TSubclassOf<ATPCharacter>> DebugCharacterClasses;
 
 	UPROPERTY()
 	TArray<TObjectPtr<APlayerState>> TurnOrder;

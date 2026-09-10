@@ -169,6 +169,24 @@ AActor* ATPGameMode::ChoosePlayerStart_Implementation(AController* Player)
 	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
+UClass* ATPGameMode::GetDefaultPawnClassForController_Implementation(AController* InController)
+{
+	const ATPGameState* TPGameState = GetGameState<ATPGameState>();
+	const APlayerState* PlayerState = InController ? InController->PlayerState : nullptr;
+	
+	const int32 PlayerIndex = TPGameState && PlayerState ? TPGameState->PlayerArray.IndexOfByKey(PlayerState) : INDEX_NONE;
+	
+	if (DebugCharacterClasses.IsValidIndex(PlayerIndex) && DebugCharacterClasses[PlayerIndex])
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Debug Character] Player %d -> %s"),
+			PlayerIndex, *DebugCharacterClasses[PlayerIndex]->GetName());
+		
+		return DebugCharacterClasses[PlayerIndex].Get();
+	}
+	
+	return Super::GetDefaultPawnClassForController_Implementation(InController);
+}
+
 bool ATPGameMode::IsPlayerStartOccupied(const AActor* PlayerStart) const
 {
 	if (!PlayerStart || !GetWorld())
