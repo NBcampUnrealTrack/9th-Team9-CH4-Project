@@ -116,16 +116,25 @@ void ATPPlayerController::RefreshMouseInputMode()
 		}
 	}
 	
-	if (bShowTopDownCursor)
+	// SetInputMode는 호출될 때마다 뷰포트 위젯에 유저 포커스를 강제로 준다. 이 함수는 턴 상태가
+	// 복제될 때마다 불리므로, 모드가 그대로인데도 매번 호출하면 한 프로세스에서 PIE 창을 여러 개
+	// 띄웠을 때 마지막으로 적용한 창이 포커스를 가져간다. 실제로 바뀔 때만 호출한다.
+	if (!bHasAppliedInputMode || bLastAppliedTopDownCursor != bShowTopDownCursor)
 	{
-		FInputModeGameAndUI InputMode;
-		InputMode.SetHideCursorDuringCapture(false);
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-		SetInputMode(InputMode);
-	}
-	else
-	{
-		SetInputMode(FInputModeGameOnly());
+		if (bShowTopDownCursor)
+		{
+			FInputModeGameAndUI InputMode;
+			InputMode.SetHideCursorDuringCapture(false);
+			InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			SetInputMode(InputMode);
+		}
+		else
+		{
+			SetInputMode(FInputModeGameOnly());
+		}
+
+		bHasAppliedInputMode = true;
+		bLastAppliedTopDownCursor = bShowTopDownCursor;
 	}
 }
 

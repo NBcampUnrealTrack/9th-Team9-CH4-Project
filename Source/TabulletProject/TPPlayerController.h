@@ -59,4 +59,8 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UUserWidget> CrosshairWidgetInstance;
+
+	// 마지막으로 SetInputMode에 넘긴 모드. 같은 모드를 다시 적용하지 않기 위한 값
+	bool bHasAppliedInputMode = false;
+	bool bLastAppliedTopDownCursor = false;
 };
