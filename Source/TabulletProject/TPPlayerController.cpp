@@ -52,10 +52,27 @@ void ATPPlayerController::PlayerTick(float DeltaTime)
 
 void ATPPlayerController::ServerRequestFlick_Implementation(AFlickTableBase* Table, ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower)
 {
+	bool bAccepted = false;
 	if (ATPGameMode* TPGameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ATPGameMode>() : nullptr)
 	{
-		TPGameMode->RequestFlick(this, Table, Piece, WorldDirection, NormalizedPower);
+		bAccepted = TPGameMode->RequestFlick(this, Table, Piece, WorldDirection, NormalizedPower);
 	}
+
+	if (!bAccepted)
+	{
+		ClientFlickRequestRejected();
+	}
+}
+
+void ATPPlayerController::ClientFlickRequestRejected_Implementation()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Flick request rejected by server. Restoring table input."));
+	RefreshMouseInputMode();
 }
 
 bool ATPPlayerController::IsMyTurn() const
