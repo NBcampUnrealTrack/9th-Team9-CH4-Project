@@ -27,6 +27,9 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Table | Flick")
 	void ServerRequestFlick(AFlickTableBase* Table, ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower);
 
+	UFUNCTION(Client, Reliable)
+	void ClientFlickRequestRejected();
+
 	UFUNCTION(BlueprintPure, Category = "Turn")
 	bool IsMyTurn() const;
 
