@@ -643,6 +643,7 @@ bool ATPGameMode::UpdateEliminationsAndCheckGameOver()
 
 		const bool bIsEliminated = TPPlayerState->RemainingPieceCount <= 0;
 		TPPlayerState->SetEliminated(bIsEliminated);
+		TPPlayerState->SetTableEliminated(bIsEliminated);
 
 		if (!bIsEliminated)
 		{
