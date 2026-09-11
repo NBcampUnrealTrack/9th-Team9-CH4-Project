@@ -16,6 +16,9 @@ ATableBulletPiece::ATableBulletPiece()
 
 	bReplicates = true;		// 복제
 	SetReplicateMovement(true);		// 움직임 복제
+	// 서버 권위 물리의 위치 보정을 보간 방식으로 처리해 클라이언트가
+	// 서버 위치를 따라잡을 때 반대 방향으로 끌려가는 현상을 줄인다.
+	SetPhysicsReplicationMode(EPhysicsReplicationMode::PredictiveInterpolation);
 	
 	PieceMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PieceMesh"));
 	
