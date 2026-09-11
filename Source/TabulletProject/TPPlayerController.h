@@ -23,6 +23,7 @@ public:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnRep_PlayerState() override;
+	virtual void PlayerTick(float DeltaTime) override;
 
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Table | Flick")
 	void ServerRequestFlick(AFlickTableBase* Table, ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower);
@@ -44,6 +45,8 @@ protected:
 	AFlickTableBase* FindFlickTable();
 	bool IsTopDownViewMode() const;
 	bool ShouldEnableTableInput() const;
+	bool IsGameViewportFocused() const;
+	void ApplyPendingInputMode();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table | Input")
 	TObjectPtr<UTableFlickInputComponent> TableFlickInputComponent;
@@ -63,4 +66,8 @@ protected:
 	// 마지막으로 SetInputMode에 넘긴 모드. 같은 모드를 다시 적용하지 않기 위한 값
 	bool bHasAppliedInputMode = false;
 	bool bLastAppliedTopDownCursor = false;
+
+	// 포커스가 없어 아직 적용하지 못한 입력 모드
+	bool bInputModeDirty = false;
+	bool bPendingTopDownCursor = false;
 };

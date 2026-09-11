@@ -12,6 +12,8 @@
 #include "Blueprint/UserWidget.h"
 #include "Table/Components/TableFlickInputComponent.h"
 #include "Table/Actors/FlickTableBase.h"
+#include "Engine/GameViewportClient.h"
+#include "UnrealClient.h"
 
 ATPPlayerController::ATPPlayerController()
 {
@@ -38,6 +40,14 @@ void ATPPlayerController::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 
 	RefreshMouseInputMode();
+}
+
+void ATPPlayerController::PlayerTick(float DeltaTime)
+{
+	Super::PlayerTick(DeltaTime);
+
+	// 포커스가 없어 보류해 둔 입력 모드를 이 창이 포커스를 얻는 즉시 적용
+	ApplyPendingInputMode();
 }
 
 void ATPPlayerController::ServerRequestFlick_Implementation(AFlickTableBase* Table, ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower)
@@ -116,26 +126,57 @@ void ATPPlayerController::RefreshMouseInputMode()
 		}
 	}
 	
-	// SetInputMode는 호출될 때마다 뷰포트 위젯에 유저 포커스를 강제로 준다. 이 함수는 턴 상태가
-	// 복제될 때마다 불리므로, 모드가 그대로인데도 매번 호출하면 한 프로세스에서 PIE 창을 여러 개
-	// 띄웠을 때 마지막으로 적용한 창이 포커스를 가져간다. 실제로 바뀔 때만 호출한다.
+	// 모드가 실제로 달라졌을 때만 적용 대상으로 표시한다
 	if (!bHasAppliedInputMode || bLastAppliedTopDownCursor != bShowTopDownCursor)
 	{
-		if (bShowTopDownCursor)
-		{
-			FInputModeGameAndUI InputMode;
-			InputMode.SetHideCursorDuringCapture(false);
-			InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-			SetInputMode(InputMode);
-		}
-		else
-		{
-			SetInputMode(FInputModeGameOnly());
-		}
-
-		bHasAppliedInputMode = true;
-		bLastAppliedTopDownCursor = bShowTopDownCursor;
+		bPendingTopDownCursor = bShowTopDownCursor;
+		bInputModeDirty = true;
 	}
+
+	ApplyPendingInputMode();
+}
+
+bool ATPPlayerController::IsGameViewportFocused() const
+{
+	const UGameViewportClient* GameViewportClient = GetWorld() ? GetWorld()->GetGameViewport() : nullptr;
+	const FViewport* GameViewport = GameViewportClient ? GameViewportClient->Viewport : nullptr;
+
+	// 판단할 수 없으면 기존대로 적용한다
+	return GameViewport == nullptr || GameViewport->HasFocus();
+}
+
+void ATPPlayerController::ApplyPendingInputMode()
+{
+	if (!bInputModeDirty)
+	{
+		return;
+	}
+
+	// SetInputMode는 호출될 때마다 뷰포트 위젯에 유저 포커스를 강제로 준다. 슬레이트 유저 포커스는
+	// 하나뿐이라, 한 프로세스에서 PIE 창을 여러 개 띄우면 포커스가 없는 창이 이걸 호출하는 순간
+	// 보고 있던 창에서 포커스를 뺏어간다. 페이즈 전환처럼 전원의 모드가 같은 프레임에 바뀔 때는
+	// 마지막으로 적용한 창(= 최고 인덱스 클라이언트)이 포커스를 가져가 버린다.
+	// 그래서 포커스를 가진 창에서만 적용하고, 나머지는 보류해 뒀다가 PlayerTick에서 처리한다.
+	if (!IsGameViewportFocused())
+	{
+		return;
+	}
+
+	if (bPendingTopDownCursor)
+	{
+		FInputModeGameAndUI InputMode;
+		InputMode.SetHideCursorDuringCapture(false);
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+	}
+	else
+	{
+		SetInputMode(FInputModeGameOnly());
+	}
+
+	bInputModeDirty = false;
+	bHasAppliedInputMode = true;
+	bLastAppliedTopDownCursor = bPendingTopDownCursor;
 }
 
 void ATPPlayerController::BindGameStateInputEvents()
