@@ -53,7 +53,9 @@ int32 UTablePieceSpawnComponent::SpawnNormalPieces(APlayerState* OwningPlayer, c
 
 		FActorSpawnParameters SpawnParameters;
 		SpawnParameters.Owner = Table;
-		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		// 기존 위치에 다른 물리 탄이 겹치면 가능한 범위에서 위치를 보정한다.
+		// 공간이 부족해도 탄 개수를 줄이지 않도록 최종적으로는 생성한다.
+		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
 		ATableBulletPiece* SpawnedPiece = World->SpawnActor<ATableBulletPiece>(NormalPieceClass, PieceTransform, SpawnParameters);
 
@@ -112,7 +114,8 @@ int32 UTablePieceSpawnComponent::SpawnSpecialPieces(const FTransform& SpawnOrigi
 
 		FActorSpawnParameters SpawnParameters;
 		SpawnParameters.Owner = Table;
-		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		// 특수탄도 일반탄과 동일하게 겹침을 피할 수 있는 위치로 보정한다.
+		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
 		ATableBulletPiece* SpawnedPiece = World->SpawnActor<ATableBulletPiece>(SelectedClass, PieceTransform, SpawnParameters);
 
