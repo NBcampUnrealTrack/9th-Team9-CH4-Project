@@ -140,6 +140,26 @@ void AFlickTableBase::Tick(float DeltaSeconds)
 	return !IsValid(Piece);
 });
 
+	// 빠른 탄이 FallJudge의 Overlap 이벤트를 건너뛴 경우에도
+	// 판정 기준면 아래로 내려갔다면 서버에서 탈락 처리한다.
+	TArray<TObjectPtr<ATableBulletPiece>> MissedFallenPieces;
+	if (IsValid(FallJudge))
+	{
+		for (ATableBulletPiece* RegisteredPiece : RegisteredPieces)
+		{
+			if (IsValid(RegisteredPiece) && FallJudge->HasPassedBelowDetectionPlane(RegisteredPiece->GetActorLocation()))
+			{
+				MissedFallenPieces.Add(RegisteredPiece);
+			}
+		}
+	}
+
+	for (ATableBulletPiece* MissedFallenPiece : MissedFallenPieces)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Recovered missed fall overlap: %s"), *MissedFallenPiece->GetName());
+		HandlePieceEnteredFallJudge(MissedFallenPiece);
+	}
+
 	bool bAnyPieceMoving = false;
 
 	for (ATableBulletPiece* RegisteredPiece : RegisteredPieces)
