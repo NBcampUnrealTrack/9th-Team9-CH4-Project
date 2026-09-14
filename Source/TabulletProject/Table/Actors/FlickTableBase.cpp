@@ -82,7 +82,7 @@ int32 AFlickTableBase::SpawnNormalPiecesForPlayers(const TArray<APlayerState*>& 
 		TotalSpawnedCount += PieceSpawner->SpawnNormalPieces(PlayerState, SpawnOrigin->GetComponentTransform(), PiecesPerPlayer);
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("Spawned %d normal table pieces for %d players"), TotalSpawnedCount, PlayerCount);
+	UE_LOG(LogTable, Log, TEXT("Spawned %d normal table pieces for %d players"), TotalSpawnedCount, PlayerCount);
 
 	return TotalSpawnedCount;
 }
@@ -96,7 +96,7 @@ int32 AFlickTableBase::SpawnSpecialPieces(int32 PieceCount)
 
 	const int32 SpawnedCount = PieceSpawner->SpawnSpecialPieces(SpecialPieceSpawnOrigin->GetComponentTransform(), PieceCount);
 
-	UE_LOG(LogTemp, Log, TEXT("Spawned %d special table pieces"), SpawnedCount);
+	UE_LOG(LogTable, Log, TEXT("Spawned %d special table pieces"), SpawnedCount);
 
 	return SpawnedCount;
 }
@@ -156,7 +156,7 @@ void AFlickTableBase::HandlePieceEnteredFallJudge(ATableBulletPiece* FallenPiece
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("Table piece fell: %s"), *FallenPiece->GetName());
+	UE_LOG(LogTable, Log, TEXT("Table piece fell: %s"), *FallenPiece->GetName());
 	const ETablePieceType FallenPieceType = FallenPiece->GetPieceType();
 	const EWeaponType RewardWeaponType = FallenPiece->GetRewardWeaponType();
 	APlayerState* FallenPieceOwner = FallenPiece->GetOwningPlayerState();
@@ -172,7 +172,7 @@ void AFlickTableBase::HandlePieceEnteredFallJudge(ATableBulletPiece* FallenPiece
 	{
 		OnSpecialPieceCaptured.Broadcast(CapturingPlayer, RewardWeaponType);
 
-		UE_LOG(LogTemp, Log, TEXT("Special table piece captured by %s, weapon type: %d"), *CapturingPlayer->GetPlayerName(), static_cast<int32>(RewardWeaponType));
+		UE_LOG(LogTable, Log, TEXT("Special table piece captured by %s, weapon type: %d"), *CapturingPlayer->GetPlayerName(), static_cast<int32>(RewardWeaponType));
 	}
 
 	FallenPiece->Destroy();
@@ -187,13 +187,13 @@ bool AFlickTableBase::TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirec
 
 	if (WorldDirection.ContainsNaN() || !FMath::IsFinite(NormalizedPower) || NormalizedPower <= 0.0f)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Rejected flick request: invalid direction or power"));
+		UE_LOG(LogTable, Warning, TEXT("Rejected flick request: invalid direction or power"));
 		return false;
 	}
 
-	if (bMonitoringPieceMovement)
+	if (IsResolvingFlick())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Rejected flick request: table is resolving physics"));
+		UE_LOG(LogTable, Warning, TEXT("Rejected flick request: table is resolving physics"));
 		return false;
 	}
 
@@ -252,8 +252,6 @@ bool AFlickTableBase::RegisterPiece(ATableBulletPiece* Piece)
 
 	RegisteredPieces.Add(Piece);
 
-	UE_LOG(LogTemp, Log, TEXT("Registered table piece: %s"), *Piece->GetName());
-
 	return true;
 }
 
@@ -268,7 +266,6 @@ bool AFlickTableBase::UnregisterPiece(ATableBulletPiece* Piece)
 
 	if (RemovedCount > 0)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Unregistered table piece: %s"), *Piece->GetName());
 		return true;
 	}
 
