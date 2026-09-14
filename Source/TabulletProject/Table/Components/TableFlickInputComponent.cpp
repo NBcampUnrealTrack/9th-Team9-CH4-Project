@@ -12,6 +12,7 @@
 #include "Engine/EngineTypes.h"
 #include "TabulletProject/Table/Actors/FlickTableBase.h"
 #include "TabulletProject/Table/Actors/TableBulletPiece.h"
+#include "TabulletProject/Table/Actors/TableAimPreviewActor.h"
 #include "TabulletProject/Table/Core/TableLog.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Math/RotationMatrix.h"
@@ -72,6 +73,11 @@ void UTableFlickInputComponent::BeginPlay()
 		return;
 	}
 
+	if (UWorld* World = GetWorld())
+	{
+		AimPreviewActor = World->SpawnActor<ATableAimPreviewActor>();
+	}
+
 	// 좌클 누르기
 	EnhancedInputComponent->BindAction(FlickAction, ETriggerEvent::Started, this,	&UTableFlickInputComponent::HandleFlickStarted);
 
@@ -92,6 +98,12 @@ void UTableFlickInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason
 	}
 
 	SetComponentTickEnabled(false);
+	HideAimPreview();
+	if (IsValid(AimPreviewActor))
+	{
+		AimPreviewActor->Destroy();
+		AimPreviewActor = nullptr;
+	}
 	SelectedPiece = nullptr;
 	ActiveTable = nullptr;
 	bTableInputEnabled = false;
@@ -133,17 +145,14 @@ void UTableFlickInputComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 	const FVector WorldDirection = CameraRight * FlickScreenDirection.X - CameraUp * FlickScreenDirection.Y;
 	const FVector TableDirection = FVector::VectorPlaneProject(WorldDirection, ActiveTable->GetActorUpVector()).GetSafeNormal();
 
-	const float PreviewLength = MaxPreviewLength * NormalizedPower;
-	const FVector ArrowStart = SelectedPiece->GetActorLocation() + ActiveTable->GetActorUpVector() * 10.0f;
-	const FVector ArrowEnd = ArrowStart + TableDirection * PreviewLength;
-
-	DrawDebugDirectionalArrow(GetWorld(), ArrowStart, ArrowEnd, PreviewArrowSize, FColor::Green, false, 0.0f, 0, PreviewLineThickness);
+	UpdateAimPreview();
 }
 
 void UTableFlickInputComponent::HandleFlickStarted(const FInputActionValue& InputValue)
 {
 	if (!bTableInputEnabled || !IsValid(ActiveTable))
 	{
+		HideAimPreview();
 		return;
 	}
 
@@ -151,6 +160,7 @@ void UTableFlickInputComponent::HandleFlickStarted(const FInputActionValue& Inpu
 
 	if (!IsValid(SelectedPiece))
 	{
+		HideAimPreview();
 		UE_LOG(LogTable, Verbose, TEXT("No table piece under cursor"));
 
 		return;
@@ -186,6 +196,7 @@ void UTableFlickInputComponent::HandleFlickCompleted(const FInputActionValue& In
 
 		SetComponentTickEnabled(false);
 		bDragging = false;
+		HideAimPreview();
 		SelectedPiece = nullptr;
 		return;
 	}
@@ -198,6 +209,7 @@ void UTableFlickInputComponent::HandleFlickCompleted(const FInputActionValue& In
 		PlayerController->SetIgnoreLookInput(false);
 		SetComponentTickEnabled(false);
 		bDragging = false;
+		HideAimPreview();
 		SelectedPiece = nullptr;
 		return;
 	}
@@ -213,6 +225,7 @@ void UTableFlickInputComponent::HandleFlickCompleted(const FInputActionValue& In
 		PlayerController->SetIgnoreLookInput(false);
 		SetComponentTickEnabled(false);
 		bDragging = false;
+		HideAimPreview();
 		SelectedPiece = nullptr;
 		return;
 	}
@@ -256,7 +269,47 @@ void UTableFlickInputComponent::HandleFlickCompleted(const FInputActionValue& In
 	PlayerController->SetIgnoreLookInput(false);
 	SetComponentTickEnabled(false);
 	bDragging = false;
+	HideAimPreview();
 	SelectedPiece = nullptr;
+}
+
+void UTableFlickInputComponent::UpdateAimPreview()
+{
+	if (!IsValid(AimPreviewActor) || !IsValid(SelectedPiece) || !IsValid(ActiveTable) || !IsValid(PlayerController) || !IsValid(PlayerController->PlayerCameraManager))
+	{
+		return;
+	}
+
+	float MouseX = 0.0f;
+	float MouseY = 0.0f;
+	if (!PlayerController->GetMousePosition(MouseX, MouseY))
+	{
+		return;
+	}
+
+	const FVector2D DragVector = FVector2D(MouseX, MouseY) - DragStartScreenPosition;
+	const float DragDistance = DragVector.Size();
+	if (DragDistance < MinDragDistancePixels)
+	{
+		HideAimPreview();
+		return;
+	}
+
+	const float NormalizedPower = FMath::Clamp(DragDistance / MaxDragDistancePixels, 0.0f, 1.0f);
+	const FVector2D FlickScreenDirection = -DragVector.GetSafeNormal();
+	const FRotationMatrix CameraMatrix(PlayerController->PlayerCameraManager->GetCameraRotation());
+	const FVector WorldDirection = CameraMatrix.GetUnitAxis(EAxis::Y) * FlickScreenDirection.X - CameraMatrix.GetUnitAxis(EAxis::Z) * FlickScreenDirection.Y;
+	const FVector TableDirection = FVector::VectorPlaneProject(WorldDirection, ActiveTable->GetActorUpVector()).GetSafeNormal();
+
+	AimPreviewActor->SetPreview(SelectedPiece->GetActorLocation() + ActiveTable->GetActorUpVector() * PreviewHeightOffset, TableDirection, MaxPreviewLength * NormalizedPower);
+}
+
+void UTableFlickInputComponent::HideAimPreview()
+{
+	if (IsValid(AimPreviewActor))
+	{
+		AimPreviewActor->HidePreview();
+	}
 }
 
 ATableBulletPiece* UTableFlickInputComponent::FindPieceUnderCursor() const
@@ -316,6 +369,7 @@ void UTableFlickInputComponent::SetTableInputEnabled(bool bEnabled, AFlickTableB
 		InputSubsystem->RemoveMappingContext(TableMappingContext);
 		PlayerController->SetIgnoreLookInput(false);
 		SetComponentTickEnabled(false);
+		HideAimPreview();
 
 		SelectedPiece = nullptr;
 		ActiveTable = nullptr;
