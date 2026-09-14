@@ -56,10 +56,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table")
 	TObjectPtr<UStaticMeshComponent> PieceMesh;
 	
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadOnly, Category = "Table")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category = "Table")
 	ETablePieceType PieceType = ETablePieceType::Normal;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Piece", meta = (EditCondition = "PieceType == ETablePieceType::Special", EditConditionHides))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Piece", meta = (EditCondition = "PieceType == ETablePieceType::Special", EditConditionHides))
 	EWeaponType RewardWeaponType;
 	
 	UPROPERTY(ReplicatedUsing = OnRep_PieceState, VisibleInstanceOnly, BlueprintReadOnly, Category = "Table Piece")

@@ -34,13 +34,13 @@ protected:
 	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Table | Input")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Table | Input")
 	TObjectPtr<UInputMappingContext> TableMappingContext;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table|Input")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input")
 	TObjectPtr<UInputAction> FlickAction;
 	
-	UPROPERTY(EditDefaultsOnly,	BlueprintReadOnly, Category = "Table|Input")
+	UPROPERTY(EditDefaultsOnly,	BlueprintReadWrite, Category = "Table|Input")
 	int32 MappingPriority = 10;
 
 	UPROPERTY(Transient)
@@ -63,23 +63,23 @@ protected:
 
 	bool bTableInputEnabled = false;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Input", meta = (ClampMin = "1.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Input", meta = (ClampMin = "1.0"))
 	float MaxDragDistancePixels = 400.f;
 	
 	FVector2D DragStartScreenPosition = FVector2D::ZeroVector;
 	
 	bool bDragging = false;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table|Input", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input", meta = (ClampMin = "0.0"))
 	float MinDragDistancePixels = 10.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
 	float MaxPreviewLength = 20.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
 	float PreviewArrowSize = 4.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
 	float PreviewLineThickness = 1.0f;
 	
 };
