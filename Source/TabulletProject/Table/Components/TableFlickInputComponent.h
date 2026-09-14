@@ -12,6 +12,7 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 class ATableBulletPiece;
+class ATableAimPreviewActor;
 class AFlickTableBase;
 class UEnhancedInputLocalPlayerSubsystem;
 
@@ -81,5 +82,14 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
 	float PreviewLineThickness = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
+	float PreviewHeightOffset = 10.0f;
+
+	UPROPERTY(Transient)
+	TObjectPtr<ATableAimPreviewActor> AimPreviewActor;
+
+	void UpdateAimPreview();
+	void HideAimPreview();
 	
 };
