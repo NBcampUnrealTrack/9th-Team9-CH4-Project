@@ -15,6 +15,7 @@
 #include "GameFramework/PlayerStart.h"
 #include "TabulletProject/Table/Actors/FlickTableBase.h"
 #include "TabulletProject/Table/Actors/TableBulletPiece.h"
+#include "UObject/ConstructorHelpers.h"
 
 ATPGameMode::ATPGameMode()
 {
@@ -24,6 +25,30 @@ ATPGameMode::ATPGameMode()
 	PlayerStateClass = ATPPlayerState::StaticClass();
 	DefaultPawnClass = ATPCharacter::StaticClass();
 	HUDClass = ATPPlayerHUD::StaticClass();
+
+	static ConstructorHelpers::FClassFinder<ATPCharacter> DogCharacterClass(TEXT("/Game/Tabullet/Characters/BP_Character_Dog"));
+	if (DogCharacterClass.Succeeded())
+	{
+		CharacterClassesByType.Add(ETPCharacterType::Dog, DogCharacterClass.Class);
+	}
+
+	static ConstructorHelpers::FClassFinder<ATPCharacter> FoxCharacterClass(TEXT("/Game/Tabullet/Characters/BP_Character_Fox"));
+	if (FoxCharacterClass.Succeeded())
+	{
+		CharacterClassesByType.Add(ETPCharacterType::Fox, FoxCharacterClass.Class);
+	}
+
+	static ConstructorHelpers::FClassFinder<ATPCharacter> BullCharacterClass(TEXT("/Game/Tabullet/Characters/BP_Character_Bull"));
+	if (BullCharacterClass.Succeeded())
+	{
+		CharacterClassesByType.Add(ETPCharacterType::Bull, BullCharacterClass.Class);
+	}
+
+	static ConstructorHelpers::FClassFinder<ATPCharacter> RaccoonCharacterClass(TEXT("/Game/Tabullet/Characters/BP_Character_Raccoon"));
+	if (RaccoonCharacterClass.Succeeded())
+	{
+		CharacterClassesByType.Add(ETPCharacterType::Raccoon, RaccoonCharacterClass.Class);
+	}
 }
 
 void ATPGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -173,6 +198,32 @@ UClass* ATPGameMode::GetDefaultPawnClassForController_Implementation(AController
 {
 	const ATPGameState* TPGameState = GetGameState<ATPGameState>();
 	const APlayerState* PlayerState = InController ? InController->PlayerState : nullptr;
+	const ATPPlayerState* TPPlayerState = Cast<ATPPlayerState>(PlayerState);
+	const ATPPlayerController* TPPlayerController = Cast<ATPPlayerController>(InController);
+	const ETPCharacterType SelectedCharacterType = TPPlayerController && TPPlayerController->GetSelectedLobbyCharacterType() != ETPCharacterType::None
+		? TPPlayerController->GetSelectedLobbyCharacterType()
+		: TPPlayerState
+			? TPPlayerState->SelectedCharacterType
+			: ETPCharacterType::None;
+
+	if (SelectedCharacterType != ETPCharacterType::None)
+	{
+		if (const TSubclassOf<ATPCharacter>* SelectedCharacterClass = CharacterClassesByType.Find(SelectedCharacterType))
+		{
+			if (*SelectedCharacterClass)
+			{
+				UE_LOG(LogTemp, Log, TEXT("[Selected Character] Player=%s Type=%d Class=%s"),
+					TPPlayerState ? *TPPlayerState->GetPlayerName() : TEXT("Unknown"),
+					static_cast<int32>(SelectedCharacterType),
+					*SelectedCharacterClass->Get()->GetName());
+				return SelectedCharacterClass->Get();
+			}
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("[Selected Character] Missing character class mapping. Player=%s Type=%d"),
+			TPPlayerState ? *TPPlayerState->GetPlayerName() : TEXT("Unknown"),
+			static_cast<int32>(SelectedCharacterType));
+	}
 	
 	const int32 PlayerIndex = TPGameState && PlayerState ? TPGameState->PlayerArray.IndexOfByKey(PlayerState) : INDEX_NONE;
 	

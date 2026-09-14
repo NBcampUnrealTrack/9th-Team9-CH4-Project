@@ -1,5 +1,6 @@
 #include "TPPlayerController.h"
 
+#include "LobbyGameMode.h"
 #include "TPGameMode.h"
 #include "TPGameState.h"
 #include "Component/ViewModeComponent.h"
@@ -13,6 +14,7 @@
 #include "Table/Components/TableFlickInputComponent.h"
 #include "Table/Actors/FlickTableBase.h"
 #include "Engine/GameViewportClient.h"
+#include "Net/UnrealNetwork.h"
 #include "UnrealClient.h"
 
 ATPPlayerController::ATPPlayerController()
@@ -50,6 +52,13 @@ void ATPPlayerController::PlayerTick(float DeltaTime)
 	ApplyPendingInputMode();
 }
 
+void ATPPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ATPPlayerController, SelectedLobbyCharacterType);
+}
+
 void ATPPlayerController::ServerRequestFlick_Implementation(AFlickTableBase* Table, ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower)
 {
 	bool bAccepted = false;
@@ -61,6 +70,54 @@ void ATPPlayerController::ServerRequestFlick_Implementation(AFlickTableBase* Tab
 	if (!bAccepted)
 	{
 		ClientFlickRequestRejected();
+	}
+}
+
+void ATPPlayerController::ServerSetLobbyReady_Implementation(bool bReady)
+{
+	if (ALobbyGameMode* LobbyGameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ALobbyGameMode>() : nullptr)
+	{
+		LobbyGameMode->RequestSetPlayerReady(this, bReady);
+	}
+}
+
+void ATPPlayerController::ServerSelectLobbyCharacter_Implementation(ETPCharacterType CharacterType)
+{
+	if (ALobbyGameMode* LobbyGameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ALobbyGameMode>() : nullptr)
+	{
+		LobbyGameMode->RequestSelectCharacter(this, CharacterType);
+	}
+}
+
+void ATPPlayerController::ToggleLobbyReady()
+{
+	const ATPPlayerState* TPPlayerState = GetPlayerState<ATPPlayerState>();
+	if (!TPPlayerState || (TPPlayerState->SelectedCharacterType == ETPCharacterType::None && SelectedLobbyCharacterType == ETPCharacterType::None))
+	{
+		return;
+	}
+
+	ServerSetLobbyReady(!TPPlayerState->bIsReady);
+}
+
+FText ATPPlayerController::GetLobbyReadyButtonText() const
+{
+	const ATPPlayerState* TPPlayerState = GetPlayerState<ATPPlayerState>();
+	if (!TPPlayerState || TPPlayerState->SelectedCharacterType == ETPCharacterType::None)
+	{
+		return NSLOCTEXT("TPPlayerController", "LobbyReadyButtonSelectCharacter", "Select Character");
+	}
+
+	return TPPlayerState->bIsReady
+		? NSLOCTEXT("TPPlayerController", "LobbyReadyButtonCancelReady", "Cancel Ready")
+		: NSLOCTEXT("TPPlayerController", "LobbyReadyButtonReady", "Ready");
+}
+
+void ATPPlayerController::SetSelectedLobbyCharacterType(ETPCharacterType NewCharacterType)
+{
+	if (HasAuthority())
+	{
+		SelectedLobbyCharacterType = NewCharacterType;
 	}
 }
 

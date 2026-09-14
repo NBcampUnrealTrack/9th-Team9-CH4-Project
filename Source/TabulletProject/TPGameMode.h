@@ -4,6 +4,7 @@
 #include "GameFramework/GameMode.h"
 #include "GameFramework/OnlineReplStructs.h"
 #include "TimerManager.h"
+#include "TPPlayerState.h"
 #include "TPGameMode.generated.h"
 
 class APlayerState;
@@ -98,6 +99,9 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Debug | Character")
 	TArray<TSubclassOf<ATPCharacter>> DebugCharacterClasses;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
+	TMap<ETPCharacterType, TSubclassOf<ATPCharacter>> CharacterClassesByType;
 
 	UPROPERTY()
 	TArray<TObjectPtr<APlayerState>> TurnOrder;

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "TPPlayerState.h"
 #include "TPPlayerController.generated.h"
 
 class AFlickTableBase;
@@ -24,9 +25,27 @@ public:
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void PlayerTick(float DeltaTime) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Table | Flick")
 	void ServerRequestFlick(AFlickTableBase* Table, ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Lobby")
+	void ServerSetLobbyReady(bool bReady);
+
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Lobby")
+	void ServerSelectLobbyCharacter(ETPCharacterType CharacterType);
+
+	UFUNCTION(BlueprintCallable, Category = "Lobby")
+	void ToggleLobbyReady();
+
+	UFUNCTION(BlueprintPure, Category = "Lobby")
+	FText GetLobbyReadyButtonText() const;
+
+	void SetSelectedLobbyCharacterType(ETPCharacterType NewCharacterType);
+
+	UFUNCTION(BlueprintPure, Category = "Lobby")
+	ETPCharacterType GetSelectedLobbyCharacterType() const { return SelectedLobbyCharacterType; }
 
 	UFUNCTION(Client, Reliable)
 	void ClientFlickRequestRejected();
@@ -65,6 +84,9 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UUserWidget> CrosshairWidgetInstance;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Lobby", meta = (AllowPrivateAccess = "true"))
+	ETPCharacterType SelectedLobbyCharacterType = ETPCharacterType::None;
 
 	// 마지막으로 SetInputMode에 넘긴 모드. 같은 모드를 다시 적용하지 않기 위한 값
 	bool bHasAppliedInputMode = false;

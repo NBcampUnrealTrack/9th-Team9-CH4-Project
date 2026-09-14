@@ -5,6 +5,18 @@
 
 #include "Net/UnrealNetwork.h"
 
+void ATPPlayerState::CopyProperties(APlayerState* PlayerState)
+{
+	Super::CopyProperties(PlayerState);
+
+	if (ATPPlayerState* NewTPPlayerState = Cast<ATPPlayerState>(PlayerState))
+	{
+		NewTPPlayerState->PlayerIndex = PlayerIndex;
+		NewTPPlayerState->bIsReady = bIsReady;
+		NewTPPlayerState->SelectedCharacterType = SelectedCharacterType;
+	}
+}
+
 void ATPPlayerState::SetPlayerIndex(int32 NewPlayerIndex)
 {
 	if (HasAuthority() && PlayerIndex != NewPlayerIndex)
@@ -41,6 +53,24 @@ void ATPPlayerState::SetTableEliminated(bool bNewIsTableEliminated)
 	}
 }
 
+void ATPPlayerState::SetReady(bool bNewIsReady)
+{
+	if (HasAuthority() && bIsReady != bNewIsReady)
+	{
+		bIsReady = bNewIsReady;
+		OnReadyChanged(bIsReady);
+	}
+}
+
+void ATPPlayerState::SetSelectedCharacterType(ETPCharacterType NewSelectedCharacterType)
+{
+	if (HasAuthority() && SelectedCharacterType != NewSelectedCharacterType)
+	{
+		SelectedCharacterType = NewSelectedCharacterType;
+		OnSelectedCharacterTypeChanged(SelectedCharacterType);
+	}
+}
+
 void ATPPlayerState::OnRep_PlayerIndex()
 {
 	OnPlayerIndexChanged(PlayerIndex);
@@ -61,6 +91,16 @@ void ATPPlayerState::OnRep_IsTableEliminated()
 	OnTableEliminatedChanged(bIsTableEliminated);
 }
 
+void ATPPlayerState::OnRep_IsReady()
+{
+	OnReadyChanged(bIsReady);
+}
+
+void ATPPlayerState::OnRep_SelectedCharacterType()
+{
+	OnSelectedCharacterTypeChanged(SelectedCharacterType);
+}
+
 void ATPPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -69,5 +109,7 @@ void ATPPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(ATPPlayerState, RemainingPieceCount);
 	DOREPLIFETIME(ATPPlayerState, bIsEliminated);
 	DOREPLIFETIME(ATPPlayerState, bIsTableEliminated);
+	DOREPLIFETIME(ATPPlayerState, bIsReady);
+	DOREPLIFETIME(ATPPlayerState, SelectedCharacterType);
 }
 
