@@ -12,6 +12,7 @@
 #include "Engine/EngineTypes.h"
 #include "TabulletProject/Table/Actors/FlickTableBase.h"
 #include "TabulletProject/Table/Actors/TableBulletPiece.h"
+#include "TabulletProject/Table/Core/TableLog.h"
 #include "Camera/PlayerCameraManager.h"
 #include "Math/RotationMatrix.h"
 #include "GameFramework/PlayerState.h"
@@ -39,7 +40,7 @@ void UTableFlickInputComponent::BeginPlay()
 
 	if (!IsValid(PlayerController))
 	{
-		UE_LOG(LogTemp,	Error, TEXT("TableFlickInputComponent must be attached ""to a PlayerController."));
+		UE_LOG(LogTable, Error, TEXT("TableFlickInputComponent must be attached ""to a PlayerController."));
 
 		return;
 	}
@@ -150,7 +151,7 @@ void UTableFlickInputComponent::HandleFlickStarted(const FInputActionValue& Inpu
 
 	if (!IsValid(SelectedPiece))
 	{
-		UE_LOG(LogTemp,	Log, TEXT("No table piece under cursor"));
+		UE_LOG(LogTable, Verbose, TEXT("No table piece under cursor"));
 
 		return;
 	}
@@ -171,7 +172,7 @@ void UTableFlickInputComponent::HandleFlickStarted(const FInputActionValue& Inpu
 	SetComponentTickEnabled(true);
 	PlayerController->SetIgnoreLookInput(true);
 
-	UE_LOG(LogTemp, Log, TEXT("Selected table piece: %s"), *SelectedPiece->GetName());
+	UE_LOG(LogTable, Verbose, TEXT("Selected table piece: %s"), *SelectedPiece->GetName());
 }
 
 void UTableFlickInputComponent::HandleFlickCompleted(const FInputActionValue& InputValue)
@@ -220,7 +221,7 @@ void UTableFlickInputComponent::HandleFlickCompleted(const FInputActionValue& In
 
 	const FVector2D FlickScreenDirection = -DragVector.GetSafeNormal();
 
-	UE_LOG(LogTemp, Log, TEXT("Flick Direction X=%.2f Y=%.2f, ""Power=%.2f"),
+	UE_LOG(LogTable, Verbose, TEXT("Flick Direction X=%.2f Y=%.2f, ""Power=%.2f"),
 		FlickScreenDirection.X,
 		FlickScreenDirection.Y,
 		NormalizedPower);
