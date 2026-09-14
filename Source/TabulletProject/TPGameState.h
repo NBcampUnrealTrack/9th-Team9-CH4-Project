@@ -53,6 +53,12 @@ public:
 	UPROPERTY(ReplicatedUsing = OnRep_WinnerPlayerState, BlueprintReadOnly, Category = "Match")
 	TObjectPtr<APlayerState> WinnerPlayerState;
 
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Match")
+	float MatchStartServerWorldTime = 0.0f;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Match")
+	float MatchEndServerWorldTime = 0.0f;
+
 	FOnReplicatedTurnStateChanged OnReplicatedTurnStateChanged;
 
 	void SetMatchPhase(ETabulletMatchPhase NewPhase);
@@ -60,6 +66,9 @@ public:
 	void SetTurnPhase(ETabulletTurnPhase NewTurnPhase);
 	void SetTurnOrderPlayerStates(const TArray<TObjectPtr<APlayerState>>& NewTurnOrderPlayerStates);
 	void SetWinnerPlayerState(APlayerState* NewWinnerPlayerState);
+
+	UFUNCTION(BlueprintPure, Category = "Match")
+	float GetMatchElapsedSeconds() const;
 
 	UFUNCTION()
 	void OnRep_MatchPhase();

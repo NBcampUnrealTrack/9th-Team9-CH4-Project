@@ -34,6 +34,7 @@ private:
 	void RefreshHUD();
 	void UpdateMatchStatusState(float DeltaSeconds);
 	FText GetPlayerCountText() const;
+	FText GetGameTimeText() const;
 	FText GetMatchStatusText() const;
 	FText GetTurnText() const;
 	FText GetAmmoText(EWeaponType WeaponType, const TCHAR* Label) const;
@@ -44,6 +45,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UTextBlock> PlayerCountText;
+
+	UPROPERTY()
+	TObjectPtr<UTextBlock> GameTimeText;
 
 	UPROPERTY()
 	TObjectPtr<UTextBlock> MatchStatusText;

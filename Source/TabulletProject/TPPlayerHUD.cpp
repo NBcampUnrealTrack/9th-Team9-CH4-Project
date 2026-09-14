@@ -61,6 +61,7 @@ void ATPPlayerHUD::CacheHUDWidgets()
 	}
 
 	PlayerCountText = Cast<UTextBlock>(GameHUDWidget->GetWidgetFromName(TEXT("PlayerCountText")));
+	GameTimeText = Cast<UTextBlock>(GameHUDWidget->GetWidgetFromName(TEXT("GameTimeText")));
 	MatchStatusText = Cast<UTextBlock>(GameHUDWidget->GetWidgetFromName(TEXT("MatchStatusText")));
 	TurnText = Cast<UTextBlock>(GameHUDWidget->GetWidgetFromName(TEXT("TurnText")));
 	RevolverAmmoText = Cast<UTextBlock>(GameHUDWidget->GetWidgetFromName(TEXT("RevolverAmmoText")));
@@ -69,8 +70,9 @@ void ATPPlayerHUD::CacheHUDWidgets()
 	HealthBar = Cast<UProgressBar>(GameHUDWidget->GetWidgetFromName(TEXT("HealthBar")));
 	HealthText = Cast<UTextBlock>(GameHUDWidget->GetWidgetFromName(TEXT("HealthText")));
 
-	UE_LOG(LogTemp, Log, TEXT("TPPlayerHUD widget cache. PlayerCountText=%s MatchStatusText=%s TurnText=%s RevolverAmmoText=%s ShotgunAmmoText=%s SniperAmmoText=%s HealthBar=%s HealthText=%s"),
+	UE_LOG(LogTemp, Log, TEXT("TPPlayerHUD widget cache. PlayerCountText=%s GameTimeText=%s MatchStatusText=%s TurnText=%s RevolverAmmoText=%s ShotgunAmmoText=%s SniperAmmoText=%s HealthBar=%s HealthText=%s"),
 		PlayerCountText ? TEXT("Found") : TEXT("Missing"),
+		GameTimeText ? TEXT("Found") : TEXT("Missing"),
 		MatchStatusText ? TEXT("Found") : TEXT("Missing"),
 		TurnText ? TEXT("Found") : TEXT("Missing"),
 		RevolverAmmoText ? TEXT("Found") : TEXT("Missing"),
@@ -85,6 +87,11 @@ void ATPPlayerHUD::RefreshHUD()
 	if (PlayerCountText)
 	{
 		PlayerCountText->SetText(GetPlayerCountText());
+	}
+
+	if (GameTimeText)
+	{
+		GameTimeText->SetText(GetGameTimeText());
 	}
 
 	if (MatchStatusText)
@@ -164,6 +171,21 @@ FText ATPPlayerHUD::GetPlayerCountText() const
 	const int32 ConnectedPlayerCount = TPGameState ? TPGameState->PlayerArray.Num() : 0;
 
 	return FText::Format(NSLOCTEXT("TPPlayerHUD", "PlayerCountFormat", "Players {0} / 4"), ConnectedPlayerCount);
+}
+
+FText ATPPlayerHUD::GetGameTimeText() const
+{
+	const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
+	const int32 ElapsedSeconds = TPGameState ? FMath::FloorToInt(TPGameState->GetMatchElapsedSeconds()) : 0;
+	const int32 Minutes = ElapsedSeconds / 60;
+	const int32 Seconds = ElapsedSeconds % 60;
+	FNumberFormattingOptions SecondsFormattingOptions;
+	SecondsFormattingOptions.SetMinimumIntegralDigits(2);
+
+	return FText::Format(
+		NSLOCTEXT("TPPlayerHUD", "GameTimeFormat", "Time {0}:{1}"),
+		FText::AsNumber(Minutes),
+		FText::AsNumber(Seconds, &SecondsFormattingOptions));
 }
 
 FText ATPPlayerHUD::GetMatchStatusText() const

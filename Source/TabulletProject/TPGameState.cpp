@@ -15,9 +15,38 @@ void ATPGameState::SetMatchPhase(ETabulletMatchPhase NewPhase)
 	if (HasAuthority() && MatchPhase != NewPhase)
 	{
 		MatchPhase = NewPhase;
+		if (MatchPhase == ETabulletMatchPhase::InGame && MatchStartServerWorldTime <= 0.0f)
+		{
+			MatchStartServerWorldTime = GetServerWorldTimeSeconds();
+			MatchEndServerWorldTime = 0.0f;
+		}
+		else if (MatchPhase == ETabulletMatchPhase::GameOver && MatchEndServerWorldTime <= 0.0f)
+		{
+			MatchEndServerWorldTime = GetServerWorldTimeSeconds();
+		}
+		else if (MatchPhase == ETabulletMatchPhase::WaitingForPlayers)
+		{
+			MatchStartServerWorldTime = 0.0f;
+			MatchEndServerWorldTime = 0.0f;
+		}
+
 		OnMatchPhaseChanged(MatchPhase);
 		OnReplicatedTurnStateChanged.Broadcast();
 	}
+}
+
+float ATPGameState::GetMatchElapsedSeconds() const
+{
+	if (MatchStartServerWorldTime <= 0.0f)
+	{
+		return 0.0f;
+	}
+
+	const float CurrentServerWorldTime = MatchEndServerWorldTime > 0.0f
+		? MatchEndServerWorldTime
+		: GetServerWorldTimeSeconds();
+
+	return FMath::Max(0.0f, CurrentServerWorldTime - MatchStartServerWorldTime);
 }
 
 void ATPGameState::SetCurrentTurnPlayerState(APlayerState* NewTurnPlayerState, int32 NewTurnNumber)
@@ -103,5 +132,7 @@ void ATPGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(ATPGameState, TurnPhase);
 	DOREPLIFETIME(ATPGameState, TurnOrderPlayerStates);
 	DOREPLIFETIME(ATPGameState, WinnerPlayerState);
+	DOREPLIFETIME(ATPGameState, MatchStartServerWorldTime);
+	DOREPLIFETIME(ATPGameState, MatchEndServerWorldTime);
 }
 
