@@ -66,6 +66,9 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Input", meta = (ClampMin = "1.0"))
 	float MaxDragDistancePixels = 400.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Input", meta = (ClampMin = "0.1"))
+	float FlickPowerGain = 2.0f;
 	
 	FVector2D DragStartScreenPosition = FVector2D::ZeroVector;
 	
@@ -75,7 +78,7 @@ protected:
 	float MinDragDistancePixels = 10.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
-	float MaxPreviewLength = 20.0f;
+	float MaxPreviewLength = 10.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
 	float PreviewArrowSize = 4.0f;
@@ -91,5 +94,6 @@ protected:
 
 	void UpdateAimPreview();
 	void HideAimPreview();
+	void EnsureAimPreviewActor();
 	
 };

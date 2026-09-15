@@ -133,6 +133,11 @@ bool ATableBulletPiece::ApplyFlickImpulse(const FVector& WorldImpulse)
 	return true;
 }
 
+FVector ATableBulletPiece::GetVisualCenterLocation() const
+{
+	return IsValid(PieceMesh) ? PieceMesh->Bounds.Origin : GetActorLocation();
+}
+
 bool ATableBulletPiece::IsMoving(float LinearThreshold, float AngularThreshold) const	// 아웃, 속도, 정지 판별
 {
 	if (IsOut() || !IsValid(PieceMesh) || !PieceMesh->IsSimulatingPhysics())

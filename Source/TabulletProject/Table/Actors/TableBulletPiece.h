@@ -51,6 +51,9 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category = "Table Piece")
 	EWeaponType GetRewardWeaponType() const { return RewardWeaponType; }
+
+	UFUNCTION(BlueprintPure, Category = "Table Piece")
+	FVector GetVisualCenterLocation() const;
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table")
