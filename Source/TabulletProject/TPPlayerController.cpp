@@ -20,6 +20,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Camera/CameraActor.h"
+#include "Camera/PlayerCameraManager.h"
 
 ATPPlayerController::ATPPlayerController()
 {
@@ -32,6 +33,34 @@ void ATPPlayerController::BeginPlay()
 
 	BindGameStateInputEvents();
 	RefreshMouseInputMode();
+
+	if (PlayerCameraManager)
+	{
+		PlayerCameraManager->ViewPitchMin = -PitchDownLimit;
+		PlayerCameraManager->ViewPitchMax = PitchUpLimit;
+	}
+}
+
+void ATPPlayerController::UpdateRotation(float DeltaTime)
+{
+	if (!bBaseYawInitialized)
+	{
+		if (const APawn* ControlledPawn = GetPawn())
+		{
+			BaseYaw = ControlledPawn->GetActorRotation().Yaw;
+			bBaseYawInitialized = true;
+		}
+	}
+
+	Super::UpdateRotation(DeltaTime);
+
+	if (bBaseYawInitialized)
+	{
+		FRotator ClampedRotation = GetControlRotation();
+		const float DeltaYaw = FMath::FindDeltaAngleDegrees(BaseYaw, ClampedRotation.Yaw);
+		ClampedRotation.Yaw = BaseYaw + FMath::Clamp(DeltaYaw, -YawLimit, YawLimit);
+		SetControlRotation(ClampedRotation);
+	}
 }
 
 void ATPPlayerController::SetupInputComponent()
@@ -96,8 +125,7 @@ void ATPPlayerController::OnRep_PlayerState()
 void ATPPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
-
-	// 포커스가 없어 보류해 둔 입력 모드를 이 창이 포커스를 얻는 즉시 적용
+	
 	ApplyPendingInputMode();
 }
 
@@ -373,12 +401,7 @@ void ATPPlayerController::ApplyPendingInputMode()
 	{
 		return;
 	}
-
-	// SetInputMode는 호출될 때마다 뷰포트 위젯에 유저 포커스를 강제로 준다. 슬레이트 유저 포커스는
-	// 하나뿐이라, 한 프로세스에서 PIE 창을 여러 개 띄우면 포커스가 없는 창이 이걸 호출하는 순간
-	// 보고 있던 창에서 포커스를 뺏어간다. 페이즈 전환처럼 전원의 모드가 같은 프레임에 바뀔 때는
-	// 마지막으로 적용한 창(= 최고 인덱스 클라이언트)이 포커스를 가져가 버린다.
-	// 그래서 포커스를 가진 창에서만 적용하고, 나머지는 보류해 뒀다가 PlayerTick에서 처리한다.
+	
 	if (!IsGameViewportFocused())
 	{
 		return;
@@ -445,7 +468,6 @@ AFlickTableBase* ATPPlayerController::FindFlickTable()
 
 bool ATPPlayerController::IsTopDownViewMode() const
 {
-	// 내 턴이어도 1인칭으로 전환돼 있으면 사격 페이즈처럼 마우스로 자유롭게 시점을 움직일 수 있어야 함
 	const APawn* MyPawn = GetPawn();
 	const UViewModeComponent* PawnViewMode = MyPawn ? MyPawn->FindComponentByClass<UViewModeComponent>() : nullptr;
 	return PawnViewMode && !PawnViewMode->IsFirstPerson();
@@ -539,7 +561,6 @@ void ATPPlayerController::HandleDeathQuarterViewInput()
 
 void ATPPlayerController::HandleLocalPawnDeathVisual()
 {
-	// 사망 즉시 기본으로 TopView 고정 카메라로 전환. 이후 T/F로 두 고정 카메라 토글.
 	const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
 	SwitchToFixedCamera(TPGameState ? TPGameState->GetTopViewCamera() : nullptr);
 }

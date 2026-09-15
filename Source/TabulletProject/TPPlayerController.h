@@ -30,6 +30,7 @@ public:
 	virtual void OnUnPossess() override;
 	virtual void OnRep_PlayerState() override;
 	virtual void PlayerTick(float DeltaTime) override;
+	virtual void UpdateRotation(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "Table | Flick")
@@ -114,8 +115,7 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> CrosshairWidgetClass;
-
-	// T/F 시점 전환 입력 (생존/사망 공통 - Pawn이 아니라 Controller가 소유)
+	
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> ViewMappingContext;
 
@@ -127,6 +127,20 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Camera")
 	float DeathCameraBlendTime = 0.75f;
+
+	// 스폰 시 바라본 방향 기준 좌우 최대 회전각
+	UPROPERTY(EditDefaultsOnly, Category = "Look Limits")
+	float YawLimit = 70.f;
+
+	// 스폰 시 바라본 방향 기준 위/아래로 최대 회전각 - PlayerCameraManager의 ViewPitchMin/Max에 적용
+	UPROPERTY(EditDefaultsOnly, Category = "Look Limits")
+	float PitchUpLimit = 60.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Look Limits")
+	float PitchDownLimit = 60.f;
+	
+	float BaseYaw = 0.f;
+	bool bBaseYawInitialized = false;
 
 	UPROPERTY()
 	TObjectPtr<UUserWidget> CrosshairWidgetInstance;
