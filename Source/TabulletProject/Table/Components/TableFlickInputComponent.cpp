@@ -295,7 +295,8 @@ void UTableFlickInputComponent::UpdateAimPreview()
 		return;
 	}
 
-	const float NormalizedPower = FMath::Clamp(DragDistance / MaxDragDistancePixels, 0.0f, 1.0f);
+	// 실제 플릭 확정 시와 동일한 증가율을 사용해 미리보기 길이와 발사 세기를 일치시킴
+	const float NormalizedPower = FMath::Clamp((DragDistance / MaxDragDistancePixels) * FlickPowerGain, 0.0f, 1.0f);
 	const FVector2D FlickScreenDirection = -DragVector.GetSafeNormal();
 	const FRotationMatrix CameraMatrix(PlayerController->PlayerCameraManager->GetCameraRotation());
 	const FVector WorldDirection = CameraMatrix.GetUnitAxis(EAxis::Y) * FlickScreenDirection.X - CameraMatrix.GetUnitAxis(EAxis::Z) * FlickScreenDirection.Y;
