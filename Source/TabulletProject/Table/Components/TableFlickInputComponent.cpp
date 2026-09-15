@@ -134,7 +134,7 @@ void UTableFlickInputComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 		return;
 	}
 
-	const float NormalizedPower = FMath::Clamp(DragDistance / MaxDragDistancePixels, 0.0f, 1.0f);
+	const float NormalizedPower = FMath::Clamp((DragDistance / MaxDragDistancePixels) * FlickPowerGain, 0.0f, 1.0f);
 	const FVector2D FlickScreenDirection = -DragVector.GetSafeNormal();
 	const FRotationMatrix CameraMatrix(PlayerController->PlayerCameraManager->GetCameraRotation());
 	const FVector CameraRight = CameraMatrix.GetUnitAxis(EAxis::Y);
@@ -228,7 +228,7 @@ void UTableFlickInputComponent::HandleFlickCompleted(const FInputActionValue& In
 		return;
 	}
 
-	const float NormalizedPower = FMath::Clamp(DragDistance / MaxDragDistancePixels, 0.0f, 1.0f);
+	const float NormalizedPower = FMath::Clamp((DragDistance / MaxDragDistancePixels) * FlickPowerGain, 0.0f, 1.0f);
 
 	const FVector2D FlickScreenDirection = -DragVector.GetSafeNormal();
 

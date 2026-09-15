@@ -67,6 +67,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Input", meta = (ClampMin = "1.0"))
 	float MaxDragDistancePixels = 400.f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Input", meta = (ClampMin = "0.1"))
+	float FlickPowerGain = 2.0f;
+	
 	FVector2D DragStartScreenPosition = FVector2D::ZeroVector;
 	
 	bool bDragging = false;
