@@ -73,10 +73,7 @@ void UTableFlickInputComponent::BeginPlay()
 		return;
 	}
 
-	if (UWorld* World = GetWorld())
-	{
-		AimPreviewActor = World->SpawnActor<ATableAimPreviewActor>();
-	}
+	EnsureAimPreviewActor();
 
 	// 좌클 누르기
 	EnhancedInputComponent->BindAction(FlickAction, ETriggerEvent::Started, this,	&UTableFlickInputComponent::HandleFlickStarted);
@@ -178,11 +175,12 @@ void UTableFlickInputComponent::HandleFlickStarted(const FInputActionValue& Inpu
 
 	DragStartScreenPosition = FVector2D(MouseX, MouseY);
 
+	EnsureAimPreviewActor();
 	bDragging = true;
 	SetComponentTickEnabled(true);
 	PlayerController->SetIgnoreLookInput(true);
 
-	UE_LOG(LogTable, Verbose, TEXT("Selected table piece: %s"), *SelectedPiece->GetName());
+	UE_LOG(LogTable, Log, TEXT("Selected table piece: %s"), *SelectedPiece->GetName());
 }
 
 void UTableFlickInputComponent::HandleFlickCompleted(const FInputActionValue& InputValue)
@@ -230,11 +228,11 @@ void UTableFlickInputComponent::HandleFlickCompleted(const FInputActionValue& In
 		return;
 	}
 
-	const float NormalizedPower =FMath::Clamp(DragDistance / MaxDragDistancePixels, 0.0f, 1.0f);
+	const float NormalizedPower = FMath::Clamp(DragDistance / MaxDragDistancePixels, 0.0f, 1.0f);
 
 	const FVector2D FlickScreenDirection = -DragVector.GetSafeNormal();
 
-	UE_LOG(LogTable, Verbose, TEXT("Flick Direction X=%.2f Y=%.2f, ""Power=%.2f"),
+	UE_LOG(LogTable, Log, TEXT("Flick Direction X=%.2f Y=%.2f, ""Power=%.2f"),
 		FlickScreenDirection.X,
 		FlickScreenDirection.Y,
 		NormalizedPower);
@@ -275,6 +273,8 @@ void UTableFlickInputComponent::HandleFlickCompleted(const FInputActionValue& In
 
 void UTableFlickInputComponent::UpdateAimPreview()
 {
+	EnsureAimPreviewActor();
+
 	if (!IsValid(AimPreviewActor) || !IsValid(SelectedPiece) || !IsValid(ActiveTable) || !IsValid(PlayerController) || !IsValid(PlayerController->PlayerCameraManager))
 	{
 		return;
@@ -301,7 +301,7 @@ void UTableFlickInputComponent::UpdateAimPreview()
 	const FVector WorldDirection = CameraMatrix.GetUnitAxis(EAxis::Y) * FlickScreenDirection.X - CameraMatrix.GetUnitAxis(EAxis::Z) * FlickScreenDirection.Y;
 	const FVector TableDirection = FVector::VectorPlaneProject(WorldDirection, ActiveTable->GetActorUpVector()).GetSafeNormal();
 
-	AimPreviewActor->SetPreview(SelectedPiece->GetActorLocation() + ActiveTable->GetActorUpVector() * PreviewHeightOffset, TableDirection, MaxPreviewLength * NormalizedPower);
+	AimPreviewActor->SetPreview(SelectedPiece->GetVisualCenterLocation() + ActiveTable->GetActorUpVector() * PreviewHeightOffset, TableDirection, MaxPreviewLength * NormalizedPower);
 }
 
 void UTableFlickInputComponent::HideAimPreview()
@@ -309,6 +309,24 @@ void UTableFlickInputComponent::HideAimPreview()
 	if (IsValid(AimPreviewActor))
 	{
 		AimPreviewActor->HidePreview();
+	}
+}
+
+void UTableFlickInputComponent::EnsureAimPreviewActor()
+{
+	if (IsValid(AimPreviewActor))
+	{
+		return;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		AimPreviewActor = World->SpawnActor<ATableAimPreviewActor>();
+	}
+
+	if (!IsValid(AimPreviewActor))
+	{
+		UE_LOG(LogTable, Error, TEXT("Failed to spawn table aim preview actor"));
 	}
 }
 

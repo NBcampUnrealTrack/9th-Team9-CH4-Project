@@ -25,9 +25,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Aim Preview", meta = (ClampMin = "0.01"))
 	float BaseMeshLength = 100.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Aim Preview", meta = (ClampMin = "0.01"))
-	float WidthScale = 1.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Aim Preview")
+	bool bReverseMeshDirection = true;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Aim Preview")
 	float HeightOffset = 0.0f;
+
 };
