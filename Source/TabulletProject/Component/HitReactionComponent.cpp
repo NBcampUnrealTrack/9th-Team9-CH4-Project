@@ -5,6 +5,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Animation/AnimInstance.h"
@@ -69,6 +70,13 @@ void UHitReactionComponent::ApplyRagdoll()
 		CameraBoom->SetComponentTickEnabled(false);
 	}
 
+	// 죽은 뒤엔 마우스/키 입력이 Look, HeadTilt, Stretch, Fire 등 Pawn 쪽 입력에 계속 반응하지 않도록 차단.
+	// T/F 시점 전환은 PlayerController의 InputComponent에 바인딩되어 있어 영향받지 않는다.
+	if (APlayerController* PC = Cast<APlayerController>(OwnerCharacter->GetController()))
+	{
+		OwnerCharacter->DisableInput(PC);
+	}
+
 	// 캡슐/무브먼트가 더 이상 물리 시뮬레이션에 간섭하지 않도록 정지
 	if (UCharacterMovementComponent* MovementComp = OwnerCharacter->GetCharacterMovement())
 	{
@@ -84,8 +92,15 @@ void UHitReactionComponent::ApplyRagdoll()
 	// 메쉬를 물리 시뮬레이션으로 전환해 축 처지는 래그돌 연출
 	if (USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh())
 	{
+		// AnimBP(목 늘리기 등 Transform Bone 노드)가 계속 본을 강제로 움직이면
+		// 물리 시뮬레이션과 충돌해 랙돌이 튕겨나간다. 애니메이션 갱신 자체를 끊어서 방지.
+		Mesh->SetAnimInstanceClass(nullptr);
+
 		Mesh->SetCollisionProfileName(TEXT("Ragdoll"));
 		Mesh->SetCollisionObjectType(ECC_PhysicsBody);
+		// 기본 Ragdoll 프리셋은 Pawn 채널도 Block이라, 물리 시작 시 주변 캐릭터 캡슐과 겹쳐 있으면
+		// depenetration으로 서로 튕겨나간다. 바닥/벽과는 부딪히되 다른 캐릭터와는 상호작용하지 않도록 덮어씀.
+		Mesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
 		Mesh->SetSimulatePhysics(true);
 		Mesh->SetAllBodiesSimulatePhysics(true);
 		Mesh->WakeAllRigidBodies();

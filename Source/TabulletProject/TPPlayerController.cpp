@@ -9,6 +9,7 @@
 #include "TPPlayerState.h"
 #include "TabulletProject/Component/WeaponManagerComponent.h"
 #include "TabulletProject/Component/AmmoComponent.h"
+#include "TabulletProject/Component/HealthComponent.h"
 #include "WeaponBase.h"
 #include "Blueprint/UserWidget.h"
 #include "Table/Components/TableFlickInputComponent.h"
@@ -16,6 +17,9 @@
 #include "Engine/GameViewportClient.h"
 #include "Net/UnrealNetwork.h"
 #include "UnrealClient.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "Camera/CameraActor.h"
 
 ATPPlayerController::ATPPlayerController()
 {
@@ -30,11 +34,56 @@ void ATPPlayerController::BeginPlay()
 	RefreshMouseInputMode();
 }
 
+void ATPPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+	{
+		if (ViewMappingContext)
+		{
+			Subsystem->AddMappingContext(ViewMappingContext, 0);
+		}
+	}
+
+	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent))
+	{
+		if (TopViewAction)
+		{
+			EnhancedInput->BindAction(TopViewAction, ETriggerEvent::Started, this, &ATPPlayerController::HandleTopViewInput);
+		}
+
+		if (DeathQuarterViewAction)
+		{
+			EnhancedInput->BindAction(DeathQuarterViewAction, ETriggerEvent::Started, this, &ATPPlayerController::HandleDeathQuarterViewInput);
+		}
+	}
+}
+
 void ATPPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
 	RefreshMouseInputMode();
+
+	if (UHealthComponent* HealthComp = InPawn ? InPawn->FindComponentByClass<UHealthComponent>() : nullptr)
+	{
+		HealthComp->OnDeathVisual.AddDynamic(this, &ATPPlayerController::HandleLocalPawnDeathVisual);
+	}
+}
+
+void ATPPlayerController::OnUnPossess()
+{
+	if (APawn* CurrentPawn = GetPawn())
+	{
+		if (UHealthComponent* HealthComp = CurrentPawn->FindComponentByClass<UHealthComponent>())
+		{
+			HealthComp->OnDeathVisual.RemoveDynamic(this, &ATPPlayerController::HandleLocalPawnDeathVisual);
+		}
+	}
+
+	Super::OnUnPossess();
 }
 
 void ATPPlayerController::OnRep_PlayerState()
@@ -450,4 +499,57 @@ void ATPPlayerController::HideCrosshair()
 	{
 		CrosshairWidgetInstance->RemoveFromParent();
 	}
+}
+
+void ATPPlayerController::HandleTopViewInput()
+{
+	APawn* MyPawn = GetPawn();
+	const UHealthComponent* HealthComp = MyPawn ? MyPawn->FindComponentByClass<UHealthComponent>() : nullptr;
+
+	if (HealthComp && HealthComp->IsDead())
+	{
+		const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
+		SwitchToFixedCamera(TPGameState ? TPGameState->GetTopViewCamera() : nullptr);
+		return;
+	}
+
+	if (UViewModeComponent* ViewModeComp = MyPawn ? MyPawn->FindComponentByClass<UViewModeComponent>() : nullptr)
+	{
+		ViewModeComp->SetViewMode(EViewMode::TopDown);
+	}
+}
+
+void ATPPlayerController::HandleDeathQuarterViewInput()
+{
+	APawn* MyPawn = GetPawn();
+	const UHealthComponent* HealthComp = MyPawn ? MyPawn->FindComponentByClass<UHealthComponent>() : nullptr;
+
+	if (HealthComp && HealthComp->IsDead())
+	{
+		const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
+		SwitchToFixedCamera(TPGameState ? TPGameState->GetDeathQuarterViewCamera() : nullptr);
+		return;
+	}
+
+	if (UViewModeComponent* ViewModeComp = MyPawn ? MyPawn->FindComponentByClass<UViewModeComponent>() : nullptr)
+	{
+		ViewModeComp->SetViewMode(EViewMode::FirstPerson);
+	}
+}
+
+void ATPPlayerController::HandleLocalPawnDeathVisual()
+{
+	// 사망 즉시 기본으로 TopView 고정 카메라로 전환. 이후 T/F로 두 고정 카메라 토글.
+	const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
+	SwitchToFixedCamera(TPGameState ? TPGameState->GetTopViewCamera() : nullptr);
+}
+
+void ATPPlayerController::SwitchToFixedCamera(ACameraActor* TargetCamera)
+{
+	if (!IsLocalController() || !TargetCamera)
+	{
+		return;
+	}
+
+	SetViewTargetWithBlend(TargetCamera, DeathCameraBlendTime);
 }

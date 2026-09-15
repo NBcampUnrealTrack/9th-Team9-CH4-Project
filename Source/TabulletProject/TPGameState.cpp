@@ -4,10 +4,31 @@
 #include "TPGameState.h"
 
 #include "Net/UnrealNetwork.h"
+#include "Camera/CameraActor.h"
+#include "EngineUtils.h"
 
 ATPGameState::ATPGameState()
 {
 	MatchPhase = ETabulletMatchPhase::WaitingForPlayers;
+}
+
+void ATPGameState::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// 레벨에 배치된 고정 카메라를 Actor Tag로 찾아 캐싱 (모든 클라이언트가 동일한 레벨 액터를 각자 로컬에서 찾음)
+	for (TActorIterator<ACameraActor> It(GetWorld()); It; ++It)
+	{
+		ACameraActor* CameraActor = *It;
+		if (CameraActor->ActorHasTag(TEXT("TopViewCamera")))
+		{
+			TopViewCamera = CameraActor;
+		}
+		else if (CameraActor->ActorHasTag(TEXT("DeathQuarterViewCamera")))
+		{
+			DeathQuarterViewCamera = CameraActor;
+		}
+	}
 }
 
 void ATPGameState::SetMatchPhase(ETabulletMatchPhase NewPhase)

@@ -5,6 +5,7 @@
 #include "TPGameState.generated.h"
 
 class APlayerState;
+class ACameraActor;
 
 DECLARE_MULTICAST_DELEGATE(FOnReplicatedTurnStateChanged);
 
@@ -34,6 +35,15 @@ class TABULLETPROJECT_API ATPGameState : public AGameState
 
 public:
 	ATPGameState();
+
+	virtual void BeginPlay() override;
+
+	// 레벨에 배치된 고정 카메라(Actor Tag로 식별: "TopViewCamera" / "DeathQuarterViewCamera")
+	UFUNCTION(BlueprintPure, Category = "Camera")
+	ACameraActor* GetTopViewCamera() const { return TopViewCamera; }
+
+	UFUNCTION(BlueprintPure, Category = "Camera")
+	ACameraActor* GetDeathQuarterViewCamera() const { return DeathQuarterViewCamera; }
 
 	UPROPERTY(ReplicatedUsing = OnRep_MatchPhase, BlueprintReadOnly, Category = "Match")
 	ETabulletMatchPhase MatchPhase = ETabulletMatchPhase::WaitingForPlayers;
@@ -104,4 +114,11 @@ public:
 	void OnWinnerChanged(APlayerState* NewWinnerPlayerState);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+protected:
+	UPROPERTY()
+	TObjectPtr<ACameraActor> TopViewCamera;
+
+	UPROPERTY()
+	TObjectPtr<ACameraActor> DeathQuarterViewCamera;
 };

@@ -10,6 +10,9 @@ class ATableBulletPiece;
 class UTableFlickInputComponent;
 class ATPGameState;
 class UUserWidget;
+class UInputMappingContext;
+class UInputAction;
+class ACameraActor;
 /**
  * 
  */
@@ -22,7 +25,9 @@ public:
 	ATPPlayerController();
 
 	virtual void BeginPlay() override;
+	virtual void SetupInputComponent() override;
 	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnUnPossess() override;
 	virtual void OnRep_PlayerState() override;
 	virtual void PlayerTick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -77,6 +82,12 @@ public:
 	void ShowCrosshair();
 	void HideCrosshair();
 
+	// T키: 생존 시엔 ViewModeComponent로 탑다운 전환, 사망 후엔 고정 TopView 카메라로 전환
+	void HandleTopViewInput();
+
+	// F키: 생존 시엔 ViewModeComponent로 1인칭 전환, 사망 후엔 고정 DeathQuarterView 카메라로 전환
+	void HandleDeathQuarterViewInput();
+
 protected:
 	static FText GetCharacterTypeText(ETPCharacterType CharacterType);
 	const ATPPlayerState* GetLobbyPlayerStateAt(int32 SlotIndex) const;
@@ -87,6 +98,10 @@ protected:
 	bool ShouldEnableTableInput() const;
 	bool IsGameViewportFocused() const;
 	void ApplyPendingInputMode();
+	void SwitchToFixedCamera(ACameraActor* TargetCamera);
+
+	UFUNCTION()
+	void HandleLocalPawnDeathVisual();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table | Input")
 	TObjectPtr<UTableFlickInputComponent> TableFlickInputComponent;
@@ -99,6 +114,19 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> CrosshairWidgetClass;
+
+	// T/F 시점 전환 입력 (생존/사망 공통 - Pawn이 아니라 Controller가 소유)
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputMappingContext> ViewMappingContext;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> TopViewAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> DeathQuarterViewAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Camera")
+	float DeathCameraBlendTime = 0.75f;
 
 	UPROPERTY()
 	TObjectPtr<UUserWidget> CrosshairWidgetInstance;
