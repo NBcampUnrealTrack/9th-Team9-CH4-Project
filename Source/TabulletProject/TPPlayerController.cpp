@@ -113,6 +113,105 @@ FText ATPPlayerController::GetLobbyReadyButtonText() const
 		: NSLOCTEXT("TPPlayerController", "LobbyReadyButtonReady", "Ready");
 }
 
+FText ATPPlayerController::GetLobbyPlayerNameText(int32 SlotIndex) const
+{
+	const ATPPlayerState* LobbyPlayerState = GetLobbyPlayerStateAt(SlotIndex);
+	if (!LobbyPlayerState)
+	{
+		return NSLOCTEXT("TPPlayerController", "LobbyPlayerNameEmpty", "Empty");
+	}
+
+	const int32 DisplayIndex = LobbyPlayerState->PlayerIndex != INDEX_NONE
+		? LobbyPlayerState->PlayerIndex + 1
+		: SlotIndex + 1;
+
+	return FText::Format(NSLOCTEXT("TPPlayerController", "LobbyPlayerNameFormat", "Player {0}"), DisplayIndex);
+}
+
+FText ATPPlayerController::GetLobbyPlayerCharacterText(int32 SlotIndex) const
+{
+	const ATPPlayerState* LobbyPlayerState = GetLobbyPlayerStateAt(SlotIndex);
+	if (!LobbyPlayerState)
+	{
+		return NSLOCTEXT("TPPlayerController", "LobbyCharacterEmpty", "-");
+	}
+
+	return GetCharacterTypeText(LobbyPlayerState->SelectedCharacterType);
+}
+
+FText ATPPlayerController::GetLobbyPlayerReadyText(int32 SlotIndex) const
+{
+	const ATPPlayerState* LobbyPlayerState = GetLobbyPlayerStateAt(SlotIndex);
+	if (!LobbyPlayerState)
+	{
+		return NSLOCTEXT("TPPlayerController", "LobbyReadyWaiting", "Waiting");
+	}
+
+	if (LobbyPlayerState->SelectedCharacterType == ETPCharacterType::None)
+	{
+		return NSLOCTEXT("TPPlayerController", "LobbyReadySelecting", "Selecting");
+	}
+
+	return LobbyPlayerState->bIsReady
+		? NSLOCTEXT("TPPlayerController", "LobbyReadyReady", "Ready")
+		: NSLOCTEXT("TPPlayerController", "LobbyReadyNotReady", "Not Ready");
+}
+
+FText ATPPlayerController::GetLobbyPlayerCountText() const
+{
+	const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
+	const int32 ConnectedPlayerCount = TPGameState ? TPGameState->PlayerArray.Num() : 0;
+
+	return FText::Format(NSLOCTEXT("TPPlayerController", "LobbyPlayerCountFormat", "Players {0} / 4"), ConnectedPlayerCount);
+}
+
+FText ATPPlayerController::GetLobbyStatusText() const
+{
+	const ATPPlayerState* TPPlayerState = GetPlayerState<ATPPlayerState>();
+	if (!TPPlayerState || TPPlayerState->SelectedCharacterType == ETPCharacterType::None)
+	{
+		return NSLOCTEXT("TPPlayerController", "LobbyStatusSelectCharacter", "Select a character");
+	}
+
+	return TPPlayerState->bIsReady
+		? NSLOCTEXT("TPPlayerController", "LobbyStatusWaitingPlayers", "Waiting for players")
+		: NSLOCTEXT("TPPlayerController", "LobbyStatusPressReady", "Press Ready");
+}
+
+FText ATPPlayerController::GetCharacterTypeText(ETPCharacterType CharacterType)
+{
+	switch (CharacterType)
+	{
+	case ETPCharacterType::Dog:
+		return NSLOCTEXT("TPPlayerController", "LobbyCharacterDog", "Dog");
+	case ETPCharacterType::Fox:
+		return NSLOCTEXT("TPPlayerController", "LobbyCharacterFox", "Fox");
+	case ETPCharacterType::Bull:
+		return NSLOCTEXT("TPPlayerController", "LobbyCharacterBull", "Bull");
+	case ETPCharacterType::Raccoon:
+		return NSLOCTEXT("TPPlayerController", "LobbyCharacterRaccoon", "Raccoon");
+	case ETPCharacterType::None:
+	default:
+		return NSLOCTEXT("TPPlayerController", "LobbyCharacterNone", "None");
+	}
+}
+
+const ATPPlayerState* ATPPlayerController::GetLobbyPlayerStateAt(int32 SlotIndex) const
+{
+	if (SlotIndex < 0)
+	{
+		return nullptr;
+	}
+
+	const ATPGameState* TPGameState = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
+	if (!TPGameState || !TPGameState->PlayerArray.IsValidIndex(SlotIndex))
+	{
+		return nullptr;
+	}
+
+	return Cast<ATPPlayerState>(TPGameState->PlayerArray[SlotIndex]);
+}
+
 void ATPPlayerController::SetSelectedLobbyCharacterType(ETPCharacterType NewCharacterType)
 {
 	if (HasAuthority())

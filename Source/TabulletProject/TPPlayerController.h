@@ -42,6 +42,21 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Lobby")
 	FText GetLobbyReadyButtonText() const;
 
+	UFUNCTION(BlueprintPure, Category = "Lobby")
+	FText GetLobbyPlayerNameText(int32 SlotIndex) const;
+
+	UFUNCTION(BlueprintPure, Category = "Lobby")
+	FText GetLobbyPlayerCharacterText(int32 SlotIndex) const;
+
+	UFUNCTION(BlueprintPure, Category = "Lobby")
+	FText GetLobbyPlayerReadyText(int32 SlotIndex) const;
+
+	UFUNCTION(BlueprintPure, Category = "Lobby")
+	FText GetLobbyPlayerCountText() const;
+
+	UFUNCTION(BlueprintPure, Category = "Lobby")
+	FText GetLobbyStatusText() const;
+
 	void SetSelectedLobbyCharacterType(ETPCharacterType NewCharacterType);
 
 	UFUNCTION(BlueprintPure, Category = "Lobby")
@@ -63,6 +78,9 @@ public:
 	void HideCrosshair();
 
 protected:
+	static FText GetCharacterTypeText(ETPCharacterType CharacterType);
+	const ATPPlayerState* GetLobbyPlayerStateAt(int32 SlotIndex) const;
+
 	void BindGameStateInputEvents();
 	AFlickTableBase* FindFlickTable();
 	bool IsTopDownViewMode() const;

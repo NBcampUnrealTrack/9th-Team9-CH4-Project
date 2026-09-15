@@ -5,6 +5,7 @@
 
 #include "Character/TPCharacter.h"
 #include "TPGameState.h"
+#include "TPGameInstance.h"
 #include "TPPlayerHUD.h"
 #include "TPPlayerController.h"
 #include "TPPlayerState.h"
@@ -200,11 +201,29 @@ UClass* ATPGameMode::GetDefaultPawnClassForController_Implementation(AController
 	const APlayerState* PlayerState = InController ? InController->PlayerState : nullptr;
 	const ATPPlayerState* TPPlayerState = Cast<ATPPlayerState>(PlayerState);
 	const ATPPlayerController* TPPlayerController = Cast<ATPPlayerController>(InController);
-	const ETPCharacterType SelectedCharacterType = TPPlayerController && TPPlayerController->GetSelectedLobbyCharacterType() != ETPCharacterType::None
+	const int32 PlayerIndex = TPGameState && PlayerState ? TPGameState->PlayerArray.IndexOfByKey(PlayerState) : INDEX_NONE;
+	const ETPCharacterType ControllerCharacterType = TPPlayerController
 		? TPPlayerController->GetSelectedLobbyCharacterType()
-		: TPPlayerState
-			? TPPlayerState->SelectedCharacterType
-			: ETPCharacterType::None;
+		: ETPCharacterType::None;
+	const ETPCharacterType PlayerStateCharacterType = TPPlayerState
+		? TPPlayerState->SelectedCharacterType
+		: ETPCharacterType::None;
+	const UTPGameInstance* TPGameInstance = GetGameInstance<UTPGameInstance>();
+	const ETPCharacterType GameInstanceCharacterType = TPGameInstance
+		? TPGameInstance->GetLobbyCharacterSelection(PlayerIndex)
+		: ETPCharacterType::None;
+	const ETPCharacterType SelectedCharacterType = ControllerCharacterType != ETPCharacterType::None
+		? ControllerCharacterType
+		: PlayerStateCharacterType != ETPCharacterType::None
+			? PlayerStateCharacterType
+			: GameInstanceCharacterType;
+
+	UE_LOG(LogTemp, Log, TEXT("[Character Spawn Decision] PlayerIndex=%d Controller=%d PlayerState=%d GameInstance=%d Final=%d"),
+		PlayerIndex,
+		static_cast<int32>(ControllerCharacterType),
+		static_cast<int32>(PlayerStateCharacterType),
+		static_cast<int32>(GameInstanceCharacterType),
+		static_cast<int32>(SelectedCharacterType));
 
 	if (SelectedCharacterType != ETPCharacterType::None)
 	{
@@ -224,8 +243,6 @@ UClass* ATPGameMode::GetDefaultPawnClassForController_Implementation(AController
 			TPPlayerState ? *TPPlayerState->GetPlayerName() : TEXT("Unknown"),
 			static_cast<int32>(SelectedCharacterType));
 	}
-	
-	const int32 PlayerIndex = TPGameState && PlayerState ? TPGameState->PlayerArray.IndexOfByKey(PlayerState) : INDEX_NONE;
 	
 	if (DebugCharacterClasses.IsValidIndex(PlayerIndex) && DebugCharacterClasses[PlayerIndex])
 	{

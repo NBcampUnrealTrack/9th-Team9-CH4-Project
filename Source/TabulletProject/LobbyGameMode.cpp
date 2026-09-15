@@ -4,6 +4,7 @@
 #include "LobbyGameMode.h"
 
 #include "LobbyHUD.h"
+#include "TPGameInstance.h"
 #include "TPGameState.h"
 #include "TPPlayerController.h"
 
@@ -16,6 +17,16 @@ ALobbyGameMode::ALobbyGameMode()
 	PlayerStateClass = ATPPlayerState::StaticClass();
 	DefaultPawnClass = nullptr;
 	HUDClass = ALobbyHUD::StaticClass();
+}
+
+void ALobbyGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (UTPGameInstance* TPGameInstance = GetGameInstance<UTPGameInstance>())
+	{
+		TPGameInstance->ClearLobbyCharacterSelections();
+	}
 }
 
 void ALobbyGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -120,6 +131,10 @@ bool ALobbyGameMode::RequestSelectCharacter(APlayerController* PlayerController,
 	if (ATPPlayerController* TPPlayerController = Cast<ATPPlayerController>(PlayerController))
 	{
 		TPPlayerController->SetSelectedLobbyCharacterType(CharacterType);
+	}
+	if (UTPGameInstance* TPGameInstance = GetGameInstance<UTPGameInstance>())
+	{
+		TPGameInstance->SetLobbyCharacterSelection(TPPlayerState->PlayerIndex, CharacterType);
 	}
 	RefreshLobbyMatchPhase();
 	return true;
