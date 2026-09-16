@@ -4,6 +4,7 @@
 #include "GameFramework/GameMode.h"
 #include "GameFramework/OnlineReplStructs.h"
 #include "TimerManager.h"
+#include "TPPlayerState.h"
 #include "TPGameMode.generated.h"
 
 class APlayerState;
@@ -28,6 +29,7 @@ public:
 	virtual void Logout(AController* Exiting) override;
 	virtual void HandleMatchHasStarted() override;
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+	virtual UClass* GetDefaultPawnClassForController_Implementation(AController* InController) override;
 
 	bool CanStartGame() const;
 	void StartGame();
@@ -52,19 +54,20 @@ public:
 protected:
 	void BeginStartCountdown();
 	void CancelStartCountdown();
-	void InitializeTurnOrder();
+	void InitializeTurnOrder(bool bResetCombatEliminations);
 	void SpawnTablePieces();
 	AFlickTableBase* FindFlickTable() const;
+	void StartNextTableRound();
 	void StartFirstTurn();
 	void SetCurrentTurnByIndex(int32 NewTurnIndex);
 	void CheckResolveComplete();
 	bool IsPlayerStartOccupied(const AActor* PlayerStart) const;
 	AActor* FindPlayerStartByTag(FName StartTag, bool bRequireUnoccupied) const;
-	bool AreAnyPiecesMoving() const;
 	bool UpdateEliminationsAndCheckGameOver();
 	void StartShootingPhase(APlayerState* TableWinner);
 	void BuildShootingTurnOrder();
 	void AdvanceShootingTurn();
+	bool IsCurrentShootingTurnController(AController* Controller) const;
 	bool CheckShootingGameOver();
 	bool IsPlayerAlive(APlayerState* PlayerState) const;
 	bool HasAnyAmmo(APlayerState* PlayerState) const;
@@ -83,25 +86,31 @@ protected:
 	float AutoStartDelay = 3.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Spawn", meta = (ClampMin = "0"))
-	int32 PiecesPerPlayer = 5;
+	int32 PiecesPerPlayer = 1;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Spawn", meta = (ClampMin = "0"))
-	int32 SpecialPieceCount = 2;
+	int32 SpecialPieceCount = 1;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Turn", meta = (ClampMin = "0.01"))
 	float ResolveCheckInterval = 0.25f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Turn", meta = (ClampMin = "0.0"))
-	float PieceStoppedSpeedThreshold = 3.0f;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Turn", meta = (ClampMin = "0.1"))
 	float MaxResolveSeconds = 8.0f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Debug | Character")
+	TArray<TSubclassOf<ATPCharacter>> DebugCharacterClasses;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character")
+	TMap<ETPCharacterType, TSubclassOf<ATPCharacter>> CharacterClassesByType;
 
 	UPROPERTY()
 	TArray<TObjectPtr<APlayerState>> TurnOrder;
 
 	UPROPERTY()
 	TArray<TObjectPtr<APlayerState>> ShootingTurnOrder;
+
+	UPROPERTY()
+	TArray<TObjectPtr<APlayerState>> TableEliminationOrder;
 
 	UPROPERTY()
 	TObjectPtr<APlayerState> TablePhaseWinner;

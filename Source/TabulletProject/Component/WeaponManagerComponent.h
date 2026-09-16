@@ -9,6 +9,7 @@
 
 class AWeaponBase;
 class UInputAction;
+class ATPGameState;
 struct FInputActionValue;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
@@ -28,6 +29,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void FireCurrentWeapon();
 
+	UFUNCTION(Server, Reliable)
+	void ServerFireCurrentWeapon();
+
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	AWeaponBase* GetCurrentWeapon() const { return CurrentWeapon; }
 
@@ -36,7 +40,7 @@ protected:
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
-	UPROPERTY(ReplicatedUsing = OnRep_CurrentWeaponType)
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentWeaponType, BlueprintReadOnly, Category = "Weapon")
 	EWeaponType CurrentWeaponType;
 
 	UFUNCTION()
@@ -49,6 +53,17 @@ protected:
 	void OnRep_WeaponArray();
 
 	void ApplyWeaponSwitch(EWeaponType NewType);
+
+	void TryBindGameState();
+	void UpdateWeaponVisibilityFromPhase();
+	bool IsWeaponVisiblePhase() const;
+
+	UPROPERTY()
+	TObjectPtr<ATPGameState> GameStateRef;
+
+	bool bBoundToGameState = false;
+
+	FTimerHandle GameStateBindRetryHandle;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<AWeaponBase> RevolverClass;

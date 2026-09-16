@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 public class TabulletProjectEditorTarget : TargetRules
 {
-	public TabulletProjectEditorTarget( TargetInfo Target) : base(Target)
+	public TabulletProjectEditorTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V5;

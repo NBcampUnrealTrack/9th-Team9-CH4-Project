@@ -2,9 +2,13 @@
 
 #include "WeaponManagerComponent.h"
 #include "TabulletProject/WeaponBase.h"
+#include "TabulletProject/TPGameMode.h"
+#include "TabulletProject/TPGameState.h"
+#include "TabulletProject/Component/AmmoComponent.h"
 #include "EnhancedInputComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/Pawn.h"
 
 UWeaponManagerComponent::UWeaponManagerComponent()
 {
@@ -18,6 +22,39 @@ void UWeaponManagerComponent::BeginPlay()
 
 	SpawnAllWeapons();
 	TryBindInput();
+	TryBindGameState();
+}
+
+void UWeaponManagerComponent::TryBindGameState()
+{
+	if (bBoundToGameState) return;
+
+	GameStateRef = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
+	if (!GameStateRef)
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			GameStateBindRetryHandle, this, &UWeaponManagerComponent::TryBindGameState, 0.2f, false);
+		return;
+	}
+
+	GameStateRef->OnReplicatedTurnStateChanged.AddUObject(
+		this, &UWeaponManagerComponent::UpdateWeaponVisibilityFromPhase);
+	bBoundToGameState = true;
+
+	UpdateWeaponVisibilityFromPhase();
+}
+
+bool UWeaponManagerComponent::IsWeaponVisiblePhase() const
+{
+	return GameStateRef && GameStateRef->MatchPhase == ETabulletMatchPhase::ShootingPhase;
+}
+
+void UWeaponManagerComponent::UpdateWeaponVisibilityFromPhase()
+{
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->SetActorHiddenInGame(!IsWeaponVisiblePhase());
+	}
 }
 
 void UWeaponManagerComponent::SpawnAllWeapons()
@@ -37,8 +74,27 @@ void UWeaponManagerComponent::SpawnAllWeapons()
 		AWeaponBase* NewWeapon = GetWorld()->SpawnActor<AWeaponBase>(Class, SpawnParams);
 		if (NewWeapon)
 		{
-			NewWeapon->AttachToComponent(OwnerCharacter->GetMesh(),
-				FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocketName);
+			FName SocketName = WeaponSocketName;
+
+			switch (Type)
+			{
+			case EWeaponType::Revolver:
+			default: // 리볼버는 기존 WeaponSocket 사용
+				break;
+				
+			case EWeaponType::Shotgun:
+				SocketName = TEXT("WeaponSocket_Shotgun");
+				break;
+				
+			case EWeaponType::Sniper:
+				SocketName = TEXT("WeaponSocket_Sniper");
+				break;
+			}
+			
+			const bool bAttached = NewWeapon->AttachToComponent(
+				OwnerCharacter->GetMesh(),
+				FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+			
 			NewWeapon->SetActorHiddenInGame(true);
 			WeaponInstances.Add(Type, NewWeapon);
 			ReplicatedWeapons.Add(NewWeapon);
@@ -93,14 +149,33 @@ void UWeaponManagerComponent::ApplyWeaponSwitch(EWeaponType NewType)
 	}
 
 	CurrentWeapon = *Found;
-	CurrentWeapon->SetActorHiddenInGame(false);
+	CurrentWeapon->SetActorHiddenInGame(!IsWeaponVisiblePhase());
 }
 
 void UWeaponManagerComponent::FireCurrentWeapon()
 {
-	if (CurrentWeapon)
+	ServerFireCurrentWeapon();
+}
+
+void UWeaponManagerComponent::ServerFireCurrentWeapon_Implementation()
+{
+	APawn* OwnerPawn = GetOwner<APawn>();
+	if (!OwnerPawn || !OwnerPawn->HasAuthority() || !CurrentWeapon)
 	{
-		CurrentWeapon->Fire();
+		return;
+	}
+
+	const UAmmoComponent* AmmoComponent = OwnerPawn->FindComponentByClass<UAmmoComponent>();
+	if (!AmmoComponent || !AmmoComponent->HasAmmo(CurrentWeaponType))
+	{
+		return;
+	}
+
+	CurrentWeapon->Fire();
+
+	if (ATPGameMode* TPGameMode = GetWorld() ? GetWorld()->GetAuthGameMode<ATPGameMode>() : nullptr)
+	{
+		TPGameMode->NotifyShotResolved(OwnerPawn->GetController());
 	}
 }
 

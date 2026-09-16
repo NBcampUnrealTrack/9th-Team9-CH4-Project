@@ -4,6 +4,8 @@
 #include "TableBulletPiece.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/PlayerState.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerController.h"
 #include "Net/UnrealNetwork.h"
 
 // Sets default values
@@ -14,6 +16,9 @@ ATableBulletPiece::ATableBulletPiece()
 
 	bReplicates = true;		// 복제
 	SetReplicateMovement(true);		// 움직임 복제
+	// 서버 권위 물리의 위치 보정을 보간 방식으로 처리해 클라이언트가
+	// 서버 위치를 따라잡을 때 반대 방향으로 끌려가는 현상을 줄인다.
+	SetPhysicsReplicationMode(EPhysicsReplicationMode::PredictiveInterpolation);
 	
 	PieceMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PieceMesh"));
 	
@@ -25,6 +30,14 @@ ATableBulletPiece::ATableBulletPiece()
 	PieceMesh->SetCollisionProfileName(TEXT("PhysicsActor"));		// 물리 충돌 설정
 	
 	PieceMesh->BodyInstance.bUseCCD = true;			// 빠르게 움직일 때 관통할 확률을 줄인다는데 모르겠음..
+	PieceMesh->SetCustomDepthStencilValue(240);
+}
+
+void ATableBulletPiece::BeginPlay()
+{
+	Super::BeginPlay();
+
+	UpdateOwnershipHighlight();
 }
 
 //  여기부터
@@ -47,6 +60,27 @@ void ATableBulletPiece::OnRep_PieceState()
 	{
 		ApplyOutState();
 	}
+}
+
+void ATableBulletPiece::OnRep_OwningPlayerState()
+{
+	UpdateOwnershipHighlight();
+}
+
+void ATableBulletPiece::UpdateOwnershipHighlight()
+{
+	if (!IsValid(PieceMesh))
+	{
+		return;
+	}
+
+	const APlayerController* LocalPlayerController = UGameplayStatics::GetPlayerController(this, 0);
+	const bool bIsOwnedByLocalPlayer =
+		IsValid(LocalPlayerController) &&
+		IsValid(LocalPlayerController->PlayerState) &&
+		OwningPlayerState == LocalPlayerController->PlayerState;
+
+	PieceMesh->SetRenderCustomDepth(bIsOwnedByLocalPlayer);
 }
 
 void ATableBulletPiece::ApplyOutState()
@@ -99,6 +133,11 @@ bool ATableBulletPiece::ApplyFlickImpulse(const FVector& WorldImpulse)
 	return true;
 }
 
+FVector ATableBulletPiece::GetVisualCenterLocation() const
+{
+	return IsValid(PieceMesh) ? PieceMesh->Bounds.Origin : GetActorLocation();
+}
+
 bool ATableBulletPiece::IsMoving(float LinearThreshold, float AngularThreshold) const	// 아웃, 속도, 정지 판별
 {
 	if (IsOut() || !IsValid(PieceMesh) || !PieceMesh->IsSimulatingPhysics())
@@ -112,6 +151,20 @@ bool ATableBulletPiece::IsMoving(float LinearThreshold, float AngularThreshold) 
 	return LinearSpeedSquared > FMath::Square(LinearThreshold) || AngularSpeedSquared > FMath::Square(AngularThreshold);
 }
 
+void ATableBulletPiece::StopPhysicsMovement()
+{
+	if (!HasAuthority() || IsOut() || !IsValid(PieceMesh) || !PieceMesh->IsSimulatingPhysics())
+	{
+		return;
+	}
+
+	PieceMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
+	PieceMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+	PieceMesh->PutAllRigidBodiesToSleep();
+
+	ForceNetUpdate();
+}
+
 void ATableBulletPiece::SetOwningPlayerState(APlayerState* InOwningPlayerState)	// 서버에서 총알 소유자 정함
 {
 	if (!HasAuthority() || PieceType != ETablePieceType::Normal)
@@ -120,6 +173,7 @@ void ATableBulletPiece::SetOwningPlayerState(APlayerState* InOwningPlayerState)	
 	}
 
 	OwningPlayerState = InOwningPlayerState;
+	UpdateOwnershipHighlight();
 	ForceNetUpdate();
 }
 

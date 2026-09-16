@@ -12,6 +12,7 @@ class ATableBulletPiece;
 class UTableFallJudgeComponent;
 class APlayerState;
 class UTablePieceSpawnComponent;
+class UTablePhysicsResolutionComponent;
 class USceneComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnTablePiecesSettled);
@@ -37,7 +38,13 @@ public:
 	bool TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirection, float NormalizedPower);
 
 	UFUNCTION(BlueprintPure, Category = "Table | Flick")
-	bool IsResolvingFlick() const { return bMonitoringPieceMovement; }
+	bool IsResolvingFlick() const;
+
+	UFUNCTION(BlueprintPure, Category = "Table | Movement")
+	bool AreAllPiecesSettled() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Movement")
+	void ForceFinishFlickResolution();
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Piece Registry")
 	bool RegisterPiece(ATableBulletPiece* Piece);
@@ -67,8 +74,6 @@ public:
 	FOnSpecialPieceCaptured OnSpecialPieceCaptured;
 	
 protected:
-	virtual void Tick(float DeltaSeconds) override;
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table")
 	TObjectPtr<USceneComponent> SceneRoot;
 	
@@ -77,6 +82,8 @@ protected:
 	
 	UFUNCTION()
 	void HandlePieceEnteredFallJudge(ATableBulletPiece* FallenPiece);
+
+	void HandlePhysicsSettled();
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Flick", meta = (ClampMin = "0.0"))
 	float MaxFlickImpulse = 40.0f;		// 최대 파워인데 나중에 수정해야 함. 현재는 테스트하면서 해본 임시값
@@ -90,15 +97,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Movement", meta = (ClampMin = "0.0"))
 	float RequiredSettledTime = 0.5f;			// 무시까지 걸리는 시간
 
-	float SettledElapsedTime = 0.0f;
-
-	bool bMonitoringPieceMovement = false;
-	
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<ATableBulletPiece>> RegisteredPieces;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table")
 	TObjectPtr<UTablePieceSpawnComponent> PieceSpawner;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table")
+	TObjectPtr<UTablePhysicsResolutionComponent> PhysicsResolution;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table | Spawn")
 	TObjectPtr<USceneComponent> Player1SpawnOrigin;

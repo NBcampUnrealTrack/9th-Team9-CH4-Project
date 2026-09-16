@@ -25,6 +25,12 @@ void UTableFallJudgeComponent::BeginPlay()
 		&UTableFallJudgeComponent::HandleBeginOverlap);
 }
 
+bool UTableFallJudgeComponent::HasPassedBelowDetectionPlane(const FVector& WorldLocation) const
+{
+	const FVector LocalLocation = GetComponentTransform().InverseTransformPosition(WorldLocation);
+	return LocalLocation.Z <= GetUnscaledBoxExtent().Z;
+}
+
 void UTableFallJudgeComponent::HandleBeginOverlap(
 	UPrimitiveComponent* OverlappedComponent,
 	AActor* OtherActor,

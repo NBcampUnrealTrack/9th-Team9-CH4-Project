@@ -6,14 +6,16 @@
 #include "TabulletProject/Table/Actors/TableBulletPiece.h"
 #include "TabulletProject/Table/Components/TableFallJudgeComponent.h"
 #include "TabulletProject/Table/Components/TablePieceSpawnComponent.h"
+#include "TabulletProject/Table/Components/TablePhysicsResolutionComponent.h"
 #include "Components/SceneComponent.h"
 #include "GameFramework/PlayerState.h"
+#include "TabulletProject/Table/Core/TableLog.h"
 
 // Sets default values
 AFlickTableBase::AFlickTableBase()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	
 	bReplicates = true;
 	SetReplicateMovement(false);
@@ -29,6 +31,9 @@ AFlickTableBase::AFlickTableBase()
 	FallJudge->OnPieceEnteredFallJudge.AddDynamic(this,	&AFlickTableBase::HandlePieceEnteredFallJudge);
 	
 	PieceSpawner = CreateDefaultSubobject<UTablePieceSpawnComponent>(TEXT("PieceSpawner"));
+	PhysicsResolution = CreateDefaultSubobject<UTablePhysicsResolutionComponent>(TEXT("PhysicsResolution"));
+	PhysicsResolution->OnPhysicsSettled.AddUObject(this, &AFlickTableBase::HandlePhysicsSettled);
+	PhysicsResolution->OnMissedFall.AddUObject(this, &AFlickTableBase::HandlePieceEnteredFallJudge);
 	
 	Player1SpawnOrigin = CreateDefaultSubobject<USceneComponent>(TEXT("Player1SpawnOrigin"));
 	Player1SpawnOrigin->SetupAttachment(RootComponent);
@@ -77,7 +82,7 @@ int32 AFlickTableBase::SpawnNormalPiecesForPlayers(const TArray<APlayerState*>& 
 		TotalSpawnedCount += PieceSpawner->SpawnNormalPieces(PlayerState, SpawnOrigin->GetComponentTransform(), PiecesPerPlayer);
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("Spawned %d normal table pieces for %d players"), TotalSpawnedCount, PlayerCount);
+	UE_LOG(LogTable, Log, TEXT("Spawned %d normal table pieces for %d players"), TotalSpawnedCount, PlayerCount);
 
 	return TotalSpawnedCount;
 }
@@ -91,7 +96,7 @@ int32 AFlickTableBase::SpawnSpecialPieces(int32 PieceCount)
 
 	const int32 SpawnedCount = PieceSpawner->SpawnSpecialPieces(SpecialPieceSpawnOrigin->GetComponentTransform(), PieceCount);
 
-	UE_LOG(LogTemp, Log, TEXT("Spawned %d special table pieces"), SpawnedCount);
+	UE_LOG(LogTable, Log, TEXT("Spawned %d special table pieces"), SpawnedCount);
 
 	return SpawnedCount;
 }
@@ -117,60 +122,30 @@ int32 AFlickTableBase::ResetTablePieces()
 
 	RegisteredPieces.Empty();
 	ActiveFlickPlayerState = nullptr;
-	SettledElapsedTime = 0.0f;
-	bMonitoringPieceMovement = false;
-	SetActorTickEnabled(false);
+	if (IsValid(PhysicsResolution))
+	{
+		PhysicsResolution->ResetMonitoring();
+	}
 
-	UE_LOG(LogTemp, Log, TEXT("Reset table pieces: removed %d pieces"), RemovedPieceCount);
+	UE_LOG(LogTable, Log, TEXT("Reset table pieces: removed %d pieces"), RemovedPieceCount);
 
 	return RemovedPieceCount;
 }
 
-void AFlickTableBase::Tick(float DeltaSeconds)
+bool AFlickTableBase::IsResolvingFlick() const
 {
-	Super::Tick(DeltaSeconds);
+	return IsValid(PhysicsResolution) && PhysicsResolution->IsResolving();
+}
 
-	if (!HasAuthority() || !bMonitoringPieceMovement)
-	{
-		return;
-	}
-
-	RegisteredPieces.RemoveAll([](const TObjectPtr<ATableBulletPiece>& Piece)
+bool AFlickTableBase::AreAllPiecesSettled() const
 {
-	return !IsValid(Piece);
-});
+	return !IsValid(PhysicsResolution) || PhysicsResolution->AreAllPiecesSettled();
+}
 
-	bool bAnyPieceMoving = false;
-
-	for (ATableBulletPiece* RegisteredPiece : RegisteredPieces)
-	{
-		if (RegisteredPiece->IsMoving(LinearSpeedThreshold, AngularSpeedThreshold))
-		{
-			bAnyPieceMoving = true;
-			break;
-		}
-	}
-
-	if (bAnyPieceMoving)
-	{
-		SettledElapsedTime = 0.0f;
-		return;
-	}
-
-	SettledElapsedTime += DeltaSeconds;
-
-	if (SettledElapsedTime < RequiredSettledTime)
-	{
-		return;
-	}
-
-	bMonitoringPieceMovement = false;
-	SettledElapsedTime = 0.0f;
-	SetActorTickEnabled(false);
+void AFlickTableBase::HandlePhysicsSettled()
+{
 	ActiveFlickPlayerState = nullptr;
-
-	UE_LOG(LogTemp, Log, TEXT("All table pieces have settled"));
-
+	UE_LOG(LogTable, Log, TEXT("All table pieces have settled"));
 	OnTablePiecesSettled.Broadcast();
 }
 
@@ -181,7 +156,7 @@ void AFlickTableBase::HandlePieceEnteredFallJudge(ATableBulletPiece* FallenPiece
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("Table piece fell: %s"), *FallenPiece->GetName());
+	UE_LOG(LogTable, Log, TEXT("Table piece fell: %s"), *FallenPiece->GetName());
 	const ETablePieceType FallenPieceType = FallenPiece->GetPieceType();
 	const EWeaponType RewardWeaponType = FallenPiece->GetRewardWeaponType();
 	APlayerState* FallenPieceOwner = FallenPiece->GetOwningPlayerState();
@@ -197,7 +172,7 @@ void AFlickTableBase::HandlePieceEnteredFallJudge(ATableBulletPiece* FallenPiece
 	{
 		OnSpecialPieceCaptured.Broadcast(CapturingPlayer, RewardWeaponType);
 
-		UE_LOG(LogTemp, Log, TEXT("Special table piece captured by %s, weapon type: %d"), *CapturingPlayer->GetPlayerName(), static_cast<int32>(RewardWeaponType));
+		UE_LOG(LogTable, Log, TEXT("Special table piece captured by %s, weapon type: %d"), *CapturingPlayer->GetPlayerName(), static_cast<int32>(RewardWeaponType));
 	}
 
 	FallenPiece->Destroy();
@@ -212,13 +187,13 @@ bool AFlickTableBase::TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirec
 
 	if (WorldDirection.ContainsNaN() || !FMath::IsFinite(NormalizedPower) || NormalizedPower <= 0.0f)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Rejected flick request: invalid direction or power"));
+		UE_LOG(LogTable, Warning, TEXT("Rejected flick request: invalid direction or power"));
 		return false;
 	}
 
-	if (bMonitoringPieceMovement)
+	if (IsResolvingFlick())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Rejected flick request: table is resolving physics"));
+		UE_LOG(LogTable, Warning, TEXT("Rejected flick request: table is resolving physics"));
 		return false;
 	}
 
@@ -245,12 +220,27 @@ bool AFlickTableBase::TryApplyFlick(ATableBulletPiece* Piece, FVector WorldDirec
 	if (bFlickApplied)
 	{
 		ActiveFlickPlayerState = Piece->GetOwningPlayerState();
-		SettledElapsedTime = 0.0f;
-		bMonitoringPieceMovement = true;
-		SetActorTickEnabled(true);
+		if (IsValid(PhysicsResolution))
+		{
+			PhysicsResolution->StartMonitoring(RegisteredPieces, FallJudge, LinearSpeedThreshold, AngularSpeedThreshold, RequiredSettledTime);
+		}
 	}
 
 	return bFlickApplied;
+}
+
+void AFlickTableBase::ForceFinishFlickResolution()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (IsValid(PhysicsResolution))
+	{
+		PhysicsResolution->ForceFinish();
+	}
+	ActiveFlickPlayerState = nullptr;
 }
 
 bool AFlickTableBase::RegisterPiece(ATableBulletPiece* Piece)
@@ -261,8 +251,6 @@ bool AFlickTableBase::RegisterPiece(ATableBulletPiece* Piece)
 	}
 
 	RegisteredPieces.Add(Piece);
-
-	UE_LOG(LogTemp, Log, TEXT("Registered table piece: %s"), *Piece->GetName());
 
 	return true;
 }
@@ -278,7 +266,6 @@ bool AFlickTableBase::UnregisterPiece(ATableBulletPiece* Piece)
 
 	if (RemovedCount > 0)
 	{
-		UE_LOG(LogTemp, Log, TEXT("Unregistered table piece: %s"), *Piece->GetName());
 		return true;
 	}
 

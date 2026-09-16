@@ -50,10 +50,10 @@ protected:
 	virtual void BeginPlay() override;
 	
 	UPROPERTY(ReplicatedUsing=OnRep_Health, VisibleAnywhere, Category = "Health")
-	float Health = 10.f;
-	
+	float Health = 1.f;
+
 	UPROPERTY(EditDefaultsOnly, Replicated, Category = "Health")
-	float MaxHealth = 10.f;
+	float MaxHealth = 1.f;
 	
 	UFUNCTION()
 	void OnRep_Health();

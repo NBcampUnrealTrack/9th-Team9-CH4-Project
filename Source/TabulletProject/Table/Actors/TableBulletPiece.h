@@ -21,6 +21,8 @@ public:
 	// Sets default values for this actor's properties
 	ATableBulletPiece();
 
+	virtual void BeginPlay() override;
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	void MarkAsOut();
@@ -31,6 +33,9 @@ public:
 	bool ApplyFlickImpulse(const FVector& WorldImpulse);
 
 	bool IsMoving(float LinearThreshold, float AngularThreshold) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Movement")
+	void StopPhysicsMovement();
 	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Table | Ownership")
 	void SetOwningPlayerState(APlayerState* InOwningPlayerState);
@@ -46,22 +51,30 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category = "Table Piece")
 	EWeaponType GetRewardWeaponType() const { return RewardWeaponType; }
+
+	UFUNCTION(BlueprintPure, Category = "Table Piece")
+	FVector GetVisualCenterLocation() const;
 	
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Table")
 	TObjectPtr<UStaticMeshComponent> PieceMesh;
 	
-	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadOnly, Category = "Table")
+	UPROPERTY(Replicated, EditDefaultsOnly, BlueprintReadWrite, Category = "Table")
 	ETablePieceType PieceType = ETablePieceType::Normal;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Piece", meta = (EditCondition = "PieceType == ETablePieceType::Special", EditConditionHides))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Piece", meta = (EditCondition = "PieceType == ETablePieceType::Special", EditConditionHides))
 	EWeaponType RewardWeaponType;
 	
 	UPROPERTY(ReplicatedUsing = OnRep_PieceState, VisibleInstanceOnly, BlueprintReadOnly, Category = "Table Piece")
 	ETablePieceState PieceState = ETablePieceState::OnTable;
 	
-	UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "Table Piece")
+	UPROPERTY(ReplicatedUsing = OnRep_OwningPlayerState, VisibleInstanceOnly, BlueprintReadOnly, Category = "Table Piece")
 	TObjectPtr<APlayerState> OwningPlayerState;
+
+	UFUNCTION()
+	void OnRep_OwningPlayerState();
+
+	void UpdateOwnershipHighlight();
 	
 	UFUNCTION()
 	void OnRep_PieceState();

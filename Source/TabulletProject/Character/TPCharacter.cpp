@@ -9,8 +9,8 @@
 #include "../Component/ViewModeComponent.h"
 #include "../Component/InteractionComponent.h"
 #include "../Component/AimAndShootComponent.h"
-#include "../Component/AmmoComponent.h"
 #include "../Component/HealthComponent.h"
+#include "TabulletProject/Component/AmmoComponent.h"
 
 // Sets default values
 ATPCharacter::ATPCharacter()
@@ -42,29 +42,6 @@ void ATPCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	ViewModeComp = FindComponentByClass<UViewModeComponent>();
-	
-	if (APlayerController* PC = Cast<APlayerController>(GetController()))
-	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = 
-			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
-		{
-			if (DefaultMappingContext)
-			{
-				Subsystem->AddMappingContext(DefaultMappingContext, 0);
-			}
-		}
-	}
-	
-	// 발사 테스트용
-	if (HasAuthority())
-	{
-		if (UAmmoComponent* Ammo = FindComponentByClass<UAmmoComponent>())
-		{
-			Ammo->SetAmmoCount(EWeaponType::Revolver, 10);
-			Ammo->SetAmmoCount(EWeaponType::Shotgun, 10);
-			Ammo->SetAmmoCount(EWeaponType::Sniper, 10);
-		}
-	}
 }
 
 void ATPCharacter::DebugDamage(float Amount)
@@ -82,11 +59,42 @@ void ATPCharacter::ServerDebugDamage_Implementation(float Amount)
 	}
 }
 
+void ATPCharacter::DebugAmmo(int32 Count)
+{
+	ServerDebugAmmo(Count);
+}
+
+void ATPCharacter::ServerDebugAmmo_Implementation(int32 Count)
+{
+	UAmmoComponent* Ammo = FindComponentByClass<UAmmoComponent>();
+	UE_LOG(LogTemp, Warning, TEXT("[DebugAmmo] Ammo %d, Count %d"),
+		Ammo != nullptr ? 1 : 0, Count);
+	
+	if (Ammo)
+	{
+		Ammo->SetAmmoCount(EWeaponType::Revolver, Count);
+		Ammo->SetAmmoCount(EWeaponType::Shotgun, Count);
+		Ammo->SetAmmoCount(EWeaponType::Sniper, Count);
+	}
+}
+
 // Called to bind functionality to input
 void ATPCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
+			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+		{
+			if (DefaultMappingContext)
+			{
+				Subsystem->AddMappingContext(DefaultMappingContext, 0);
+			}
+		}
+	}
+
 	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		if (LookAction)

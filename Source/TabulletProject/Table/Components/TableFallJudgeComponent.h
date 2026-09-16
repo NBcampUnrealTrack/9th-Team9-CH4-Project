@@ -22,6 +22,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Table | Fall Judge")
 	FOnTablePieceEnteredFallJudge OnPieceEnteredFallJudge;
 
+	// 빠른 물체가 Overlap 이벤트를 놓쳤을 때 사용할 보조 낙하 판정이다.
+	bool HasPassedBelowDetectionPlane(const FVector& WorldLocation) const;
+
 protected:
 	virtual void BeginPlay() override;
 

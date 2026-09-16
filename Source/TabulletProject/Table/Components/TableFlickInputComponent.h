@@ -12,6 +12,7 @@ class UInputMappingContext;
 class UInputAction;
 struct FInputActionValue;
 class ATableBulletPiece;
+class ATableAimPreviewActor;
 class AFlickTableBase;
 class UEnhancedInputLocalPlayerSubsystem;
 
@@ -34,13 +35,13 @@ protected:
 	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Table | Input")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Table | Input")
 	TObjectPtr<UInputMappingContext> TableMappingContext;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table|Input")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input")
 	TObjectPtr<UInputAction> FlickAction;
 	
-	UPROPERTY(EditDefaultsOnly,	BlueprintReadOnly, Category = "Table|Input")
+	UPROPERTY(EditDefaultsOnly,	BlueprintReadWrite, Category = "Table|Input")
 	int32 MappingPriority = 10;
 
 	UPROPERTY(Transient)
@@ -63,25 +64,36 @@ protected:
 
 	bool bTableInputEnabled = false;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Input", meta = (ClampMin = "1.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Input", meta = (ClampMin = "1.0"))
 	float MaxDragDistancePixels = 400.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table | Input", meta = (ClampMin = "0.1"))
+	float FlickPowerGain = 2.0f;
 	
 	FVector2D DragStartScreenPosition = FVector2D::ZeroVector;
 	
 	bool bDragging = false;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table|Input", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input", meta = (ClampMin = "0.0"))
 	float MinDragDistancePixels = 10.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
-	float MaxPreviewLength = 20.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
+	float MaxPreviewLength = 10.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
 	float PreviewArrowSize = 4.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
 	float PreviewLineThickness = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Table|Input|Preview", meta = (ClampMin = "0.0"))
+	float PreviewHeightOffset = 10.0f;
+
+	UPROPERTY(Transient)
+	TObjectPtr<ATableAimPreviewActor> AimPreviewActor;
+
+	void UpdateAimPreview();
+	void HideAimPreview();
+	void EnsureAimPreviewActor();
 	
-	UFUNCTION(Server, Reliable)
-	void ServerRequestFlick(ATableBulletPiece* Piece, AFlickTableBase* Table, FVector WorldDirection, float NormalizedPower);
 };

@@ -61,20 +61,47 @@ bool AWeaponBase::Server_Fire_Validate()
 
 void AWeaponBase::Server_Fire_Implementation()
 {
-    if (!WeaponMesh) return;
-
-    UAmmoComponent* AmmoComp = GetOwner() ? GetOwner()->FindComponentByClass<UAmmoComponent>() : nullptr;
-    if (!AmmoComp || !AmmoComp->TryConsumeAmmo(WeaponType))
+    if (!WeaponMesh)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[Weapon] 탄약 없음, 발사 취소: %s"), *UEnum::GetValueAsString(WeaponType));
         return;
     }
 
-    FVector StartLocation = WeaponMesh->GetSocketLocation(TEXT("MuzzleSocket"));
-    FVector ForwardVector = WeaponMesh->GetSocketRotation(TEXT("MuzzleSocket")).Vector();
+    AActor* WeaponOwner = GetOwner();
+    if (!WeaponOwner)
+    {
+        return;
+    }
+
+    APawn* OwnerPawn = Cast<APawn>(WeaponOwner);
+    if (!OwnerPawn)
+    {
+        return;
+    }
+
+    AController* OwnerController = OwnerPawn->GetController();
+    if (!OwnerController)
+    {
+        return;
+    }
+
+    UAmmoComponent* AmmoComp = WeaponOwner->FindComponentByClass<UAmmoComponent>();
+    if (!AmmoComp || !AmmoComp->TryConsumeAmmo(WeaponType))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Weapon] 탄약 없음, 발사 취소: %s"),
+            *UEnum::GetValueAsString(WeaponType));
+        return;
+    }
+
+    FVector StartLocation;
+    FRotator ViewRotation;
+
+    OwnerController->GetPlayerViewPoint(StartLocation, ViewRotation);
+
+    FVector ForwardVector = ViewRotation.Vector();
 
     FCollisionQueryParams QueryParams;
     QueryParams.AddIgnoredActor(this);
+    QueryParams.AddIgnoredActor(WeaponOwner);
 
     int32 NumPellets = FMath::Max(PelletCount, 1);
     TSet<AActor*> HitActors;
@@ -95,27 +122,51 @@ void AWeaponBase::Server_Fire_Implementation()
 
         FHitResult HitResult;
         bool bHit = GetWorld()->LineTraceSingleByChannel(
-            HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams);
+            HitResult,
+            StartLocation,
+            EndLocation,
+            ECC_Visibility,
+            QueryParams
+        );
 
         DebugStarts.Add(StartLocation);
-        DebugEnds.Add(EndLocation);
+
+        if (bHit)
+        {
+            DebugEnds.Add(HitResult.ImpactPoint);
+        }
+        else
+        {
+            DebugEnds.Add(EndLocation);
+        }
 
         if (bHit)
         {
             AActor* HitActor = HitResult.GetActor();
+            UPrimitiveComponent* HitComponent = HitResult.GetComponent();
+
+            FString HitActorName = HitActor ? HitActor->GetName() : TEXT("None");
+            FString HitComponentName = HitComponent ? HitComponent->GetName() : TEXT("None");
+            FString ImpactPointString = HitResult.ImpactPoint.ToString();
+
+            UE_LOG(LogTemp, Warning, TEXT("[Weapon Test] Hit Actor=%s / Component=%s / Impact=%s"),
+                *HitActorName, *HitComponentName, *ImpactPointString);
+
             if (HitActor && !HitActors.Contains(HitActor))
             {
                 HitActors.Add(HitActor);
 
-                UE_LOG(LogTemp, Warning, TEXT("%s hit %s with %s (Damage: %.1d)"),
+                UE_LOG(LogTemp, Warning, TEXT("%s hit %s with %s (Damage: %d)"),
                     *GetName(), *HitActor->GetName(), *UEnum::GetValueAsString(WeaponType), Damage);
 
-            	ATPCharacter* HitCharacter = Cast<ATPCharacter>(HitActor);
-            	if (HitCharacter && HitCharacter->GetHealthComponent())
-            	{
-            		AController* KillerController = GetOwner() ? GetOwner()->GetInstigatorController() : nullptr;
-            		HitCharacter->GetHealthComponent()->ApplyHealthDamage(Damage, KillerController);
-            	}
+                ATPCharacter* HitCharacter = Cast<ATPCharacter>(HitActor);
+                if (HitCharacter && HitCharacter->GetHealthComponent())
+                {
+                    HitCharacter->GetHealthComponent()->ApplyHealthDamage(
+                        Damage,
+                        OwnerController
+                    );
+                }
             }
         }
     }
