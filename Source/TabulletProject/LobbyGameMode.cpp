@@ -219,7 +219,7 @@ void ALobbyGameMode::TravelToInGameMap()
 		return;
 	}
 
-	const FString TravelURL = InGameMapPath + TEXT("?listen");
+	const FString TravelURL = InGameMapPath;
 	GetWorld()->ServerTravel(TravelURL);
 }
 
