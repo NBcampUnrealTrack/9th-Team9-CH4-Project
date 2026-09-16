@@ -53,7 +53,7 @@ protected:
 	float Health = 1.f;
 
 	UPROPERTY(EditDefaultsOnly, Replicated, Category = "Health")
-	float MaxHealth = 1.f;
+	float MaxHealth = 5.f;
 	
 	UFUNCTION()
 	void OnRep_Health();

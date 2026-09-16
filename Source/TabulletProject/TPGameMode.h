@@ -86,7 +86,7 @@ protected:
 	float AutoStartDelay = 3.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Spawn", meta = (ClampMin = "0"))
-	int32 PiecesPerPlayer = 1;
+	int32 PiecesPerPlayer = 2;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Table | Spawn", meta = (ClampMin = "0"))
 	int32 SpecialPieceCount = 1;
