@@ -69,34 +69,12 @@ void AWeaponBase::Server_Fire_Implementation()
         UE_LOG(LogTemp, Warning, TEXT("[Weapon] 탄약 없음, 발사 취소: %s"), *UEnum::GetValueAsString(WeaponType));
         return;
     }
-	// 모션 완성하면 주석 제거
-    // FVector StartLocation = WeaponMesh->GetSocketLocation(TEXT("MuzzleSocket"));
-    // FVector ForwardVector = WeaponMesh->GetSocketRotation(TEXT("MuzzleSocket")).Vector();
 	
-	// 통합 테스트용 임시 t포즈 사격
-	ATPCharacter* OwnerCharacter = Cast<ATPCharacter>(GetOwner());
-	if (!OwnerCharacter)
-	{
-		return;
-	}
-
-	AController* OwnerController = OwnerCharacter->GetController();
-	if (!OwnerController)
-	{
-		return;
-	}
-
-	FVector StartLocation;
-	FRotator ViewRotation;
-
-	OwnerController->GetPlayerViewPoint(StartLocation, ViewRotation);
-	FVector ForwardVector = ViewRotation.Vector();
-	UE_LOG(LogTemp, Warning, TEXT("[Weapon Test] Start=%s, Forawrd=%s, Range=%.1f, Damage=%d"),
-		*StartLocation.ToString(), *ForwardVector.ToString(), Range, Damage);
+    FVector StartLocation = WeaponMesh->GetSocketLocation(TEXT("MuzzleSocket"));
+    FVector ForwardVector = WeaponMesh->GetSocketRotation(TEXT("MuzzleSocket")).Vector();
 
     FCollisionQueryParams QueryParams;
     QueryParams.AddIgnoredActor(this);
-    QueryParams.AddIgnoredActor(OwnerCharacter); // 통합 테스트 t포즈 사격용
 
     int32 NumPellets = FMath::Max(PelletCount, 1);
     TSet<AActor*> HitActors;

@@ -40,8 +40,27 @@ void UWeaponManagerComponent::SpawnAllWeapons()
 		AWeaponBase* NewWeapon = GetWorld()->SpawnActor<AWeaponBase>(Class, SpawnParams);
 		if (NewWeapon)
 		{
-			NewWeapon->AttachToComponent(OwnerCharacter->GetMesh(),
-				FAttachmentTransformRules::SnapToTargetNotIncludingScale, WeaponSocketName);
+			FName SocketName = WeaponSocketName;
+
+			switch (Type)
+			{
+			case EWeaponType::Revolver:
+			default: // 리볼버는 기존 WeaponSocket 사용
+				break;
+				
+			case EWeaponType::Shotgun:
+				SocketName = TEXT("WeaponSocket_Shotgun");
+				break;
+				
+			case EWeaponType::Sniper:
+				SocketName = TEXT("WeaponSocket_Sniper");
+				break;
+			}
+			
+			const bool bAttached = NewWeapon->AttachToComponent(
+				OwnerCharacter->GetMesh(),
+				FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+			
 			NewWeapon->SetActorHiddenInGame(true);
 			WeaponInstances.Add(Type, NewWeapon);
 			ReplicatedWeapons.Add(NewWeapon);

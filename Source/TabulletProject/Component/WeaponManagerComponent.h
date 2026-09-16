@@ -39,7 +39,7 @@ protected:
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
-	UPROPERTY(ReplicatedUsing = OnRep_CurrentWeaponType)
+	UPROPERTY(ReplicatedUsing = OnRep_CurrentWeaponType, BlueprintReadOnly, Category = "Weapon")
 	EWeaponType CurrentWeaponType;
 
 	UFUNCTION()
