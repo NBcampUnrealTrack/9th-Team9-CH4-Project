@@ -9,6 +9,7 @@
 
 class AWeaponBase;
 class UInputAction;
+class ATPGameState;
 struct FInputActionValue;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
@@ -52,6 +53,17 @@ protected:
 	void OnRep_WeaponArray();
 
 	void ApplyWeaponSwitch(EWeaponType NewType);
+
+	void TryBindGameState();
+	void UpdateWeaponVisibilityFromPhase();
+	bool IsWeaponVisiblePhase() const;
+
+	UPROPERTY()
+	TObjectPtr<ATPGameState> GameStateRef;
+
+	bool bBoundToGameState = false;
+
+	FTimerHandle GameStateBindRetryHandle;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
 	TSubclassOf<AWeaponBase> RevolverClass;

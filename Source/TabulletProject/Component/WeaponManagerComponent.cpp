@@ -3,6 +3,7 @@
 #include "WeaponManagerComponent.h"
 #include "TabulletProject/WeaponBase.h"
 #include "TabulletProject/TPGameMode.h"
+#include "TabulletProject/TPGameState.h"
 #include "TabulletProject/Component/AmmoComponent.h"
 #include "EnhancedInputComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -21,6 +22,39 @@ void UWeaponManagerComponent::BeginPlay()
 
 	SpawnAllWeapons();
 	TryBindInput();
+	TryBindGameState();
+}
+
+void UWeaponManagerComponent::TryBindGameState()
+{
+	if (bBoundToGameState) return;
+
+	GameStateRef = GetWorld() ? GetWorld()->GetGameState<ATPGameState>() : nullptr;
+	if (!GameStateRef)
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			GameStateBindRetryHandle, this, &UWeaponManagerComponent::TryBindGameState, 0.2f, false);
+		return;
+	}
+
+	GameStateRef->OnReplicatedTurnStateChanged.AddUObject(
+		this, &UWeaponManagerComponent::UpdateWeaponVisibilityFromPhase);
+	bBoundToGameState = true;
+
+	UpdateWeaponVisibilityFromPhase();
+}
+
+bool UWeaponManagerComponent::IsWeaponVisiblePhase() const
+{
+	return GameStateRef && GameStateRef->MatchPhase == ETabulletMatchPhase::ShootingPhase;
+}
+
+void UWeaponManagerComponent::UpdateWeaponVisibilityFromPhase()
+{
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->SetActorHiddenInGame(!IsWeaponVisiblePhase());
+	}
 }
 
 void UWeaponManagerComponent::SpawnAllWeapons()
@@ -115,7 +149,7 @@ void UWeaponManagerComponent::ApplyWeaponSwitch(EWeaponType NewType)
 	}
 
 	CurrentWeapon = *Found;
-	CurrentWeapon->SetActorHiddenInGame(false);
+	CurrentWeapon->SetActorHiddenInGame(!IsWeaponVisiblePhase());
 }
 
 void UWeaponManagerComponent::FireCurrentWeapon()
